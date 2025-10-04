@@ -59,6 +59,9 @@ docker run -d --name telegram-search \
   ghcr.io/groupultra/telegram-search:latest
 ```
 
+> [!NOTE]
+> The Docker image runs both the backend server and serves the frontend on port 3000. The `-p 3333:3000` mapping exposes the container's port 3000 to your host's port 3333. The backend server automatically serves the frontend static files and handles API requests and WebSocket connections on the same port.
+
 <details>
 <summary>Example with environment variables</summary>
 
@@ -109,6 +112,12 @@ Replace `<postgres-host>` with the hostname or IP address of the PostgreSQL inst
 </details>
 
 2. Access `http://localhost:3333` to open the search interface.
+
+> [!IMPORTANT]
+> **Database Mode Explanation**:
+> - **Default Mode (no environment variables)**: Uses PGlite (embedded database), data is stored in the Docker volume `telegram-search-data`. In this mode, data is **persistent within the container** and retained in the Docker volume.
+> - **PostgreSQL Mode**: Set `DATABASE_TYPE=postgres` and `DATABASE_URL` to store data in an external PostgreSQL database. This enables **data synchronization across multiple machines or browsers**.
+> - **Docker Compose Mode** (recommended for multi-machine sync): Use the Docker Compose method below, which automatically configures a PostgreSQL database for full data synchronization capabilities.
 
 ### Start with Docker Compose
 
