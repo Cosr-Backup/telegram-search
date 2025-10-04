@@ -44,9 +44,16 @@ netlify deploy --prod
 1. 访问 [Netlify](https://app.netlify.com)
 2. 点击 "Add new site" → "Import an existing project"
 3. 连接你的 Git 仓库
-4. 选择 `netlify-deployment` 分支
-5. Netlify 会自动检测 `netlify.toml` 配置
-6. 点击 "Deploy site"
+4. 选择 `netlify-deployment` 分支（或 `main` 分支）
+5. 配置构建设置：
+   - **Base directory（基础目录）**: `.` (根目录 - 重要!)
+   - **Build command（构建命令）**: 从 `netlify.toml` 自动检测
+   - **Publish directory（发布目录）**: `apps/web/dist`
+   - **Functions directory（函数目录）**: `netlify/functions`
+6. **重要**: 如果询问 "Package directory（包目录）"，设置为 `.` (根目录)
+7. 点击 "Deploy site"
+
+> **注意**: Package directory 必须设置为 `.`（根目录），因为这是一个 monorepo，Netlify Functions 需要访问 workspace 依赖。详见 [NETLIFY_PACKAGE_DIRECTORY.md](./NETLIFY_PACKAGE_DIRECTORY.md)。
 
 ### 3. 配置环境变量（可选）
 

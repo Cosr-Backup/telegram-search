@@ -49,9 +49,16 @@ netlify deploy --prod
 1. Go to [Netlify](https://app.netlify.com)
 2. Click "Add new site" → "Import an existing project"
 3. Connect your Git repository
-4. Select the `netlify-deployment` branch
-5. Netlify will automatically detect the `netlify.toml` configuration
-6. Click "Deploy site"
+4. Select the `netlify-deployment` branch (or `main` branch)
+5. Configure build settings:
+   - **Base directory**: `.` (root directory - IMPORTANT!)
+   - **Build command**: Auto-detected from `netlify.toml`
+   - **Publish directory**: `apps/web/dist`
+   - **Functions directory**: `netlify/functions`
+6. **IMPORTANT**: If asked for "Package directory", set it to `.` (root directory)
+7. Click "Deploy site"
+
+> **Note**: The Package directory must be set to `.` (root) because this is a monorepo and Netlify Functions need access to workspace dependencies. See [NETLIFY_PACKAGE_DIRECTORY.md](./NETLIFY_PACKAGE_DIRECTORY.md) for details.
 
 ### 3. Configure Environment Variables (Optional)
 

@@ -1,4 +1,6 @@
 [build]
+  # Base directory for build - this is the root of the monorepo
+  base = "."
   # Build command for the frontend - enable browser-only mode with VITE_WITH_CORE
   command = "VITE_WITH_CORE=true pnpm run packages:build && VITE_WITH_CORE=true pnpm run web:build"
   # Publish directory - where the built static files are located
@@ -19,6 +21,13 @@
   # Database configuration (optional - set in Netlify UI for production)
   # DATABASE_TYPE = "postgres"  # Set to "postgres" to use PostgreSQL backend
   # DATABASE_URL = "postgresql://user:password@host:port/database"  # PostgreSQL connection string
+
+# Functions configuration
+[functions]
+  # Use esbuild for bundling functions (required for workspace dependencies)
+  node_bundler = "esbuild"
+  # Include all node_modules in the bundle
+  included_files = ["node_modules/**", "packages/*/dist/**", "packages/*/src/**"]
 
 # Redirect API calls to the serverless function
 [[redirects]]
