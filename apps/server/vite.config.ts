@@ -22,7 +22,7 @@ export default defineConfig({
 
   ssr: {
     // 将 @node-rs/jieba 标记为外部依赖，防止 Vite 尝试打包它
-    external: ['@node-rs/jieba']
+    external: ['@node-rs/jieba', '@unbird/logg']
   },
   
   plugins: [
