@@ -82,7 +82,7 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
   setupWsRoutes(app)
 
   // Serve static files from web build in production
-  const distPath = resolve(import.meta.dirname, '../../../web/dist')
+  const distPath = resolve(import.meta.dirname, '../../web/dist')
   if (existsSync(distPath)) {
     logger.log(`Serving static files from: ${distPath}`)
 
