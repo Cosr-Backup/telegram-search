@@ -37,5 +37,8 @@ ENV TELEGRAM_API_HASH="d524b414d21f4d37f08684c1df41ac9c"
 ENV EMBEDDING_API_KEY="sk-proj-1234567890"
 ENV EMBEDDING_BASE_URL="https://api.openai.com/v1"
 ENV PROXY_URL=""
+ENV PORT="3000"
 
-ENTRYPOINT ["/bin/sh", "-c", "exec pnpm run start"]
+EXPOSE 3000
+
+ENTRYPOINT ["/bin/sh", "-c", "exec pnpm run server:dev"]

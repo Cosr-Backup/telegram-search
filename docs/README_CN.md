@@ -55,7 +55,7 @@
 
 ```bash
 docker run -d --name telegram-search \
-  -p 3333:3333 \
+  -p 3333:3000 \
   -v telegram-search-data:/app/data \
   ghcr.io/groupultra/telegram-search:latest
 ```
@@ -94,7 +94,7 @@ docker run -d --name telegram-search \
 
 ```bash
 docker run -d --name telegram-search \
-  -p 3333:3333 \
+  -p 3333:3000 \
   -v telegram-search-data:/app/data \
   -e TELEGRAM_API_ID=611335 \
   -e TELEGRAM_API_HASH=d524b414d21f4d37f08684c1df41ac9c \
