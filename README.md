@@ -29,6 +29,7 @@ A powerful Telegram chat history search tool that supports vector search and sem
 ## 💖 Sponsors
 
 ![Sponsors](https://github.com/luoling8192/luoling8192/raw/master/sponsorkit/sponsors.svg)
+
 ## 🌐 Try it Now
 
 We provide an online version where you can experience all features of Telegram Search without self-deployment.
@@ -39,6 +40,35 @@ We provide an online version where you can experience all features of Telegram S
 Visit: https://search.lingogram.app
 
 ## 🚀 Quick Start
+
+### Deploy to Netlify (Recommended for Easy Deployment)
+
+> [!TIP]
+> For the easiest deployment experience, use our Netlify-optimized branch. It runs entirely in the browser with no backend server required!
+
+**One-Click Deploy:**
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Cosr-Backup/telegram-search&branch=netlify-deployment)
+
+**Manual Deploy:**
+
+```bash
+# Switch to Netlify deployment branch
+git checkout netlify-deployment
+
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Login and deploy
+netlify login
+netlify init
+netlify deploy --prod
+```
+
+📖 **Full Documentation:**
+- [English Guide](./NETLIFY_DEPLOYMENT.md)
+- [中文指南](./NETLIFY_DEPLOYMENT_CN.md)
+- [Testing Guide](./TESTING_GUIDE.md)
 
 ### Runtime environment variables
 

@@ -21,6 +21,8 @@ export function sharedUnoConfig() {
         fonts: {
           sans: 'Roboto',
         },
+        // Don't fail build if fonts can't be fetched
+        inlineImports: false,
       }),
       presetAnimations(),
       presetShadcn({
