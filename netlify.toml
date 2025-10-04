@@ -10,11 +10,15 @@
 [build.environment]
   NODE_VERSION = "22.20.0"
   PNPM_VERSION = "10.17.1"
-  # Enable browser-only mode (use PGlite instead of backend server)
+  # Enable browser-only mode by default (use PGlite instead of backend server)
+  # Set to false to use PostgreSQL backend
   VITE_WITH_CORE = "true"
   # Telegram API credentials
   VITE_TELEGRAM_APP_ID = "611335"
   VITE_TELEGRAM_APP_HASH = "d524b414d21f4d37f08684c1df41ac9c"
+  # Database configuration (optional - set in Netlify UI for production)
+  # DATABASE_TYPE = "postgres"  # Set to "postgres" to use PostgreSQL backend
+  # DATABASE_URL = "postgresql://user:password@host:port/database"  # PostgreSQL connection string
 
 # Redirect API calls to the serverless function
 [[redirects]]
@@ -23,7 +27,14 @@
   status = 200
   force = true
 
-# Redirect WebSocket connections to the serverless function
+# Redirect API v1 calls to the new API function
+[[redirects]]
+  from = "/api/v1/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# Redirect WebSocket connections to the serverless function (polling-based)
 [[redirects]]
   from = "/ws"
   to = "/.netlify/functions/ws"
