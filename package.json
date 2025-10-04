@@ -29,7 +29,7 @@
     "bump": "bumpp",
     "bump:deps": "taze -I -f -w -r",
     "db:generate": "drizzle-kit generate",
-    "postinstall": "DATABASE_URL=$NETLIFY_DATABASE_URL pnpm drizzle-kit push:pg
+    "postinstall": "DATABASE_URL=$NETLIFY_DATABASE_URL pnpm drizzle-kit push:pg",
     "db:kit": "tsx scripts/db.ts",
     "postinstall": "pnpm run packages:build"
   },
