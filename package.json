@@ -30,6 +30,7 @@
     "bump:deps": "taze -I -f -w -r",
     "db:generate": "drizzle-kit generate",
     "db:kit": "tsx scripts/db.ts",
+    "migrate:prod": "pnpm -F @tg-search/server exec node migrate.mjs",
     "postinstall": "pnpm run packages:build"
   },
   "devDependencies": {
