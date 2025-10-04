@@ -96,4 +96,9 @@ export default defineConfig({
       },
     },
   },
+
+  // Allow all hosts in preview mode to support reverse proxy deployments
+  preview: {
+    allowedHosts: true,
+  },
 })
