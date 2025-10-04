@@ -7,6 +7,7 @@
     "@netlify/functions": "^2.8.2",
     "@tg-search/common": "workspace:*",
     "@tg-search/core": "workspace:*",
-    "@unbird/logg": "catalog:"
+    "@unbird/logg": "catalog:",
+    "drizzle-orm": "catalog:"
   }
 }
