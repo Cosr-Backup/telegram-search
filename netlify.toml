@@ -4,7 +4,7 @@
   # 这个命令会构建 monorepo 中的所有应用和包
   command = "pnpm run build"
   # 指定后端 functions 的目录
-  functions = "packages/server/dist"
+  functions = "apps/server/dist"
 
 # 这个是前端的配置
 [[redirects]]
