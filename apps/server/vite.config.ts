@@ -7,6 +7,19 @@ import { defineConfig } from 'vite'
 // the packaged code cannot be used directly,
 // and the plugin needs to be reconfigured.
 export default defineConfig({
+    build: {
+    // 指定输出目录为 dist
+    outDir: 'dist',
+    // 开启 SSR (服务器端渲染) 模式
+    ssr: true,
+    // 关闭代码压缩，方便调试 (可选)
+    minify: false,
+    rollupOptions: {
+      // 指定入口文件
+      input: 'src/app.ts'
+    }
+  },
+      
   plugins: [
     DrizzleORMMigrations({
       root: '../..',
