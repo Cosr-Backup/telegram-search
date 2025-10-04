@@ -69,18 +69,21 @@ function applyProxyOverrides(config: Config, flags?: RuntimeFlags): void {
   const currentTelegram = config.api.telegram || {}
   let proxyConfig = currentTelegram.proxy
 
+  // First, try to parse proxyUrl from flags (environment variable)
   if (flags?.proxyUrl) {
     const parsedFromUrl = parseProxyUrl(flags.proxyUrl)
     if (parsedFromUrl) {
       proxyConfig = parsedFromUrl
     }
   }
+  // Then, try to parse proxyUrl from config file
   else if (currentTelegram.proxy?.proxyUrl) {
     const parsedFromUrl = parseProxyUrl(currentTelegram.proxy.proxyUrl)
     if (parsedFromUrl) {
       proxyConfig = parsedFromUrl
     }
   }
+  // Finally, apply individual proxy flags (legacy support)
   else {
     const proxyFlags = {
       ip: flags?.proxyIp,
@@ -92,14 +95,17 @@ function applyProxyOverrides(config: Config, flags?: RuntimeFlags): void {
       username: flags?.proxyUsername,
       password: flags?.proxyPassword,
     }
+
     const definedProxyFlags = Object.fromEntries(
       Object.entries(proxyFlags).filter(([, value]) => value !== undefined),
     )
+
     if (Object.keys(definedProxyFlags).length > 0) {
       proxyConfig = defu(definedProxyFlags, currentTelegram.proxy) as ProxyConfig
     }
   }
 
+  // Both ip and port must be valid for the proxy to work
   if (proxyConfig && proxyConfig.ip && proxyConfig.port) {
     config.api.telegram = {
       ...currentTelegram,
@@ -111,6 +117,7 @@ function applyProxyOverrides(config: Config, flags?: RuntimeFlags): void {
 export async function initConfig(flags?: RuntimeFlags) {
   if (isBrowser()) {
     const configStorage = useLocalStorage(CONFIG_STORAGE_KEY, generateDefaultConfig())
+
     const savedConfig = configStorage.value
     if (savedConfig) {
       try {
@@ -119,47 +126,28 @@ export async function initConfig(flags?: RuntimeFlags) {
       }
       catch {}
     }
+
     config = generateDefaultConfig()
     return config
   }
 
-  // --- 这是在原始代码基础上，唯一需要修改的地方 ---
-  // 1. 动态导入 process
-  const process = await import('node:process')
+  const { useConfigPath } = await import('./node/path')
+  const { readFileSync } = await import('node:fs')
+  const { parse } = await import('yaml')
 
-  // 2. 在服务器端，检查 Netlify 的环境变量
-  if (process.env.NETLIFY && process.env.DATABASE_URL) {
-    logger.log('✅ Netlify environment detected. Overriding database URL from environment variable.')
-    // 创建一个临时的 flags 对象，只包含 dbUrl
-    const netlifyFlags: RuntimeFlags = { ...flags, dbUrl: process.env.DATABASE_URL }
-    // 调用原始的服务器端加载逻辑，但传入我们伪造的 flags
-    return await loadNodeConfig(netlifyFlags)
-  }
-  // 如果不是 Netlify 环境，或者环境变量不存在，则执行原始逻辑
-  return await loadNodeConfig(flags)
-  // --- 修改结束 ---
+  const configPath = await useConfigPath()
+
+  const configData = readFileSync(configPath, 'utf-8')
+  const configParsedData = parse(configData)
+
+  const validatedConfig = validateAndMergeConfig(configParsedData)
+  const runtimeConfig = applyRuntimeOverrides(validatedConfig, flags)
+
+  config = runtimeConfig
+
+  logger.withFields(config).log('Config loaded')
+  return config
 }
-
-// 将原始的服务器端加载逻辑，封装到一个新的函数中
-async function loadNodeConfig(flags?: RuntimeFlags) {
-    const { useConfigPath } = await import('./node/path')
-    const { readFileSync } = await import('node:fs')
-    const { parse } = await import('yaml')
-
-    const configPath = await useConfigPath()
-
-    const configData = readFileSync(configPath, 'utf-8')
-    const configParsedData = parse(configData)
-
-    const validatedConfig = validateAndMergeConfig(configParsedData)
-    const runtimeConfig = applyRuntimeOverrides(validatedConfig, flags)
-
-    config = runtimeConfig
-
-    logger.withFields(config).log('Config loaded')
-    return config
-}
-
 
 function applyRuntimeOverrides(baseConfig: Config, flags?: RuntimeFlags): Config {
   const runtimeConfig: Config = {
@@ -171,9 +159,11 @@ function applyRuntimeOverrides(baseConfig: Config, flags?: RuntimeFlags): Config
     runtimeConfig.api = { ...baseConfig.api }
   }
 
+  // Apply database URL override
   runtimeConfig.database.type = flags?.dbProvider || runtimeConfig.database.type
   runtimeConfig.database.url = flags?.dbUrl || runtimeConfig.database.url || getDatabaseDSN(runtimeConfig)
 
+  // Apply API overrides
   applyTelegramOverrides(runtimeConfig, flags)
   applyEmbeddingOverrides(runtimeConfig, flags)
   applyProxyOverrides(runtimeConfig, flags)
@@ -184,10 +174,14 @@ function applyRuntimeOverrides(baseConfig: Config, flags?: RuntimeFlags): Config
 export async function updateConfig(newConfig: Partial<Config>) {
   if (isBrowser()) {
     const configStorage = useLocalStorage(CONFIG_STORAGE_KEY, generateDefaultConfig())
+
     const validatedConfig = validateAndMergeConfig(newConfig, config)
+
     logger.withFields({ config: validatedConfig }).log('Updating config')
+
     config = validatedConfig
     configStorage.value = config
+
     return config
   }
 
