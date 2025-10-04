@@ -119,6 +119,8 @@ function checkNetlifyConfig() {
     { key: 'VITE_WITH_CORE', description: 'browser-only mode flag' },
     { key: 'NODE_VERSION', description: 'Node.js version' },
     { key: 'PNPM_VERSION', description: 'pnpm version' },
+    { key: 'base = "."', description: 'base directory (root)' },
+    { key: 'node_bundler', description: 'functions node bundler' },
   ]
   
   let allChecked = true
@@ -160,17 +162,12 @@ function checkFunctions() {
     }
   })
   
-  // Check for package.json
+  // Check for package.json - should NOT exist (we use root dependencies)
   const packageJsonPath = join(functionsDir, 'package.json')
   if (existsSync(packageJsonPath)) {
-    log('Functions package.json found', 'success')
-    
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
-    if (packageJson.dependencies) {
-      log(`${Object.keys(packageJson.dependencies).length} dependencies configured`, 'success')
-    }
+    log('Functions package.json found (should be removed for Netlify deployment)', 'warning')
   } else {
-    log('Functions package.json not found', 'warning')
+    log('Functions package.json correctly removed (uses root dependencies)', 'success')
   }
   
   return allFunctionsExist
