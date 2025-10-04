@@ -1,6 +1,6 @@
 [build]
   base = "/"
-  command = "pnpm run build"
+  command = "pnpm run db:migrate && pnpm run build"
   publish = "apps/web/dist"
   functions = "apps/server/dist"
 
