@@ -1,0 +1,12 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/functions": "^2.8.2",
+    "@tg-search/common": "workspace:*",
+    "@tg-search/core": "workspace:*",
+    "@unbird/logg": "catalog:"
+  }
+}
