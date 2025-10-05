@@ -1,12 +1,14 @@
 import type { RuntimeFlags } from '@tg-search/common'
 import type { CrossWSOptions } from 'listhen'
 
+import { existsSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import process from 'node:process'
 
 import { initConfig, parseEnvFlags } from '@tg-search/common'
 import { initDrizzle } from '@tg-search/core'
 import { initLogger, useLogger } from '@unbird/logg'
-import { createApp, createRouter, defineEventHandler, toNodeListener } from 'h3'
+import { createApp, createRouter, defineEventHandler, serveStatic, toNodeListener } from 'h3'
 import { listen } from 'listhen'
 
 import { setupWsRoutes } from './ws/routes'
@@ -72,12 +74,83 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
   // }))
 
   const router = createRouter()
-  router.get('/health', defineEventHandler(() => {
+  router.get('/api/health', defineEventHandler(() => {
     return Response.json({ success: true })
   }))
 
   app.use(router)
   setupWsRoutes(app)
+
+  // Serve static files from web build in production
+  const distPath = resolve(import.meta.dirname, '../../web/dist')
+  if (existsSync(distPath)) {
+    logger.log(`Serving static files from: ${distPath}`)
+
+    // Serve static assets from /assets
+    app.use('/assets/**', defineEventHandler((event) => {
+      return serveStatic(event, {
+        getContents: id => import('node:fs').then(fs => fs.readFileSync(join(distPath, id))),
+        getMeta: async (id) => {
+          const stats = await import('node:fs/promises').then(fs => fs.stat(join(distPath, id)).catch(() => null))
+          if (!stats || !stats.isFile()) {
+            return
+          }
+          return {
+            size: stats.size,
+            mtime: stats.mtimeMs,
+          }
+        },
+      })
+    }))
+
+    // Serve other static files (favicon, etc)
+    app.use(defineEventHandler((event) => {
+      const path = event.path
+      // Don't interfere with API routes or WebSocket
+      if (path.startsWith('/api') || path.startsWith('/ws')) {
+        return
+      }
+
+      // Try to serve static file, otherwise serve index.html for SPA routing
+      return serveStatic(event, {
+        getContents: (id) => {
+          const filePath = id === '/' ? 'index.html' : id
+          const fullPath = join(distPath, filePath)
+
+          return import('node:fs').then((fs) => {
+            // If file doesn't exist, serve index.html for SPA routing
+            if (!fs.existsSync(fullPath)) {
+              return fs.readFileSync(join(distPath, 'index.html'))
+            }
+            return fs.readFileSync(fullPath)
+          })
+        },
+        getMeta: async (id) => {
+          const filePath = id === '/' ? 'index.html' : id
+          const fullPath = join(distPath, filePath)
+
+          const stats = await import('node:fs/promises').then(fs =>
+            fs.stat(fullPath).catch(() =>
+              // If file doesn't exist, use index.html stats for SPA routing
+              fs.stat(join(distPath, 'index.html')).catch(() => null),
+            ),
+          )
+
+          if (!stats || !stats.isFile()) {
+            return
+          }
+
+          return {
+            size: stats.size,
+            mtime: stats.mtimeMs,
+          }
+        },
+      })
+    }))
+  }
+  else {
+    logger.log('Static files not found, serving API only')
+  }
 
   return app
 }

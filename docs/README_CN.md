@@ -55,10 +55,13 @@
 
 ```bash
 docker run -d --name telegram-search \
-  -p 3333:3333 \
+  -p 3333:3000 \
   -v telegram-search-data:/app/data \
   ghcr.io/groupultra/telegram-search:latest
 ```
+
+> [!NOTE]
+> Docker 镜像同时运行后端服务器和前端，均在容器内的 3000 端口提供服务。`-p 3333:3000` 映射将容器的 3000 端口映射到主机的 3333 端口。后端服务器会自动提供前端静态文件，并在同一端口处理 API 请求和 WebSocket 连接。
 
 <details>
 <summary>带环境变量的示例</summary>
@@ -94,7 +97,7 @@ docker run -d --name telegram-search \
 
 ```bash
 docker run -d --name telegram-search \
-  -p 3333:3333 \
+  -p 3333:3000 \
   -v telegram-search-data:/app/data \
   -e TELEGRAM_API_ID=611335 \
   -e TELEGRAM_API_HASH=d524b414d21f4d37f08684c1df41ac9c \
@@ -110,6 +113,12 @@ docker run -d --name telegram-search \
 </details>
 
 2. 浏览器访问 `http://localhost:3333` 打开搜索界面。
+
+> [!IMPORTANT]
+> **数据库模式说明**：
+> - **默认模式（不设置环境变量）**：使用 PGlite（内置数据库），数据存储在 Docker 卷 `telegram-search-data` 中。此模式下数据在**容器内持久化**，可以在同一 Docker 卷中保留。
+> - **PostgreSQL 模式**：设置 `DATABASE_TYPE=postgres` 和 `DATABASE_URL` 后，数据将存储在外部 PostgreSQL 数据库中。这样可以在**多个机器或浏览器间同步数据**。
+> - **Docker Compose 模式**（推荐用于多机器同步）：使用下面的 Docker Compose 方式，会自动配置 PostgreSQL 数据库，实现完整的数据同步功能。
 
 ### 使用 Docker Compose
 
