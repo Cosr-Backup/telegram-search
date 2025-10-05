@@ -50,10 +50,10 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
         error: error instanceof Error ? error.message : 'Unknown error',
       }).error('Request failed')
 
-      return Response.json({
+      return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-      })
+      }
     },
   })
 
@@ -75,7 +75,7 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
 
   const router = createRouter()
   router.get('/api/health', defineEventHandler(() => {
-    return Response.json({ success: true })
+    return { success: true }
   }))
 
   app.use(router)
