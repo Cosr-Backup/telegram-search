@@ -32,6 +32,7 @@ export async function initDrizzle(
     dbPath?: string
     debuggerWebSocketUrl?: string
     isDatabaseDebugMode?: boolean
+    disableMigrations?: boolean
   },
 ) {
   logger.log('Initializing database...')
@@ -49,6 +50,7 @@ export async function initDrizzle(
       const { initPgDrizzle } = await import('./pg')
       dbInstance = await initPgDrizzle(logger, config, {
         isDatabaseDebugMode: options?.isDatabaseDebugMode,
+        disableMigrations: options?.disableMigrations,
       })
       break
     }
@@ -58,12 +60,14 @@ export async function initDrizzle(
         const { initPgliteDrizzleInBrowser } = await import('./pglite.browser')
         dbInstance = await initPgliteDrizzleInBrowser(logger, {
           isDatabaseDebugMode: options?.isDatabaseDebugMode,
+          disableMigrations: options?.disableMigrations,
         })
       }
       else {
         const { initPgliteDrizzleInNode } = await import('./pglite')
         dbInstance = await initPgliteDrizzleInNode(logger, config, options?.dbPath, {
           isDatabaseDebugMode: options?.isDatabaseDebugMode,
+          disableMigrations: options?.disableMigrations,
         })
       }
       break

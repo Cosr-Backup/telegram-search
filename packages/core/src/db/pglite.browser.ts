@@ -31,6 +31,7 @@ export async function initPgliteDrizzleInBrowser(
   options: {
     debuggerWebSocketUrl?: string
     isDatabaseDebugMode?: boolean
+    disableMigrations?: boolean
   } = {},
 ) {
   logger.log('Initializing pglite drizzle in browser...')
@@ -73,7 +74,9 @@ export async function initPgliteDrizzleInBrowser(
       logger.log('Vector extension enabled successfully')
 
       // Migrate database
-      await applyMigrations(logger, db)
+      if (!options.disableMigrations) {
+        await applyMigrations(logger, db)
+      }
     }
     catch (error) {
       logger.withError(error).error('Failed to connect to database')
