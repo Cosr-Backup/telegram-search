@@ -4,7 +4,9 @@ packages:
   - apps/*
 
 catalog:
-  '@guiiai/logg': ^1.2.5
+  '@guiiai/logg': npm:@unbird/logg@^1.1.3
+  '@unbird/eslint-config': ^1.0.2
+  '@unbird/logg': ^1.1.3
   '@unbird/result': ^1.1.1
   '@xsai-ext/providers-cloud': ^0.4.0-beta.9
   '@xsai-ext/providers-local': ^0.4.0-beta.9
