@@ -3,8 +3,8 @@ import type { CoreDialog } from '../../types/dialog'
 import { describe, expect, it, vi } from 'vitest'
 
 import { setDbInstanceForTests } from '../../db'
-import { accountJoinedChatsTable } from '../../schemas/account_joined_chats'
-import { joinedChatsTable } from '../../schemas/joined_chats'
+import { accountJoinedChatsTable } from '../../schemas/account-joined-chats'
+import { joinedChatsTable } from '../../schemas/joined-chats'
 import { fetchChatsByAccountId, recordChats } from '../chats'
 
 describe('chats model with accounts', () => {
@@ -109,7 +109,7 @@ describe('chats model with accounts', () => {
       throw new Error('Unexpected table')
     })
 
-    const transaction = vi.fn(async (fn: (tx: any) => Promise<unknown>) => {
+    const transaction = vi.fn(async (fn: (tx: { insert: typeof chatsInsert }) => Promise<unknown>) => {
       // Simulate drizzle transaction: pass tx with insert method
       return fn({ insert: chatsInsert })
     })
@@ -196,7 +196,7 @@ describe('chats model with accounts', () => {
       throw new Error('Unexpected table')
     })
 
-    const transaction = vi.fn(async (fn: (tx: any) => Promise<unknown>) => {
+    const transaction = vi.fn(async (fn: (tx: { insert: typeof chatsInsert }) => Promise<unknown>) => {
       return fn({ insert: chatsInsert })
     })
 
