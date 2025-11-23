@@ -5,7 +5,17 @@ import type { CoreMessage } from '../types/message'
 
 import { useLogger } from '@guiiai/logg'
 
-import { convertToCoreRetrievalMessages, fetchChats, fetchMessageContextWithPhotos, fetchMessagesWithPhotos, getChatMessagesStats, recordChats, recordMessagesWithMedia, retrieveMessages } from '../models'
+import {
+  convertToCoreRetrievalMessages,
+  fetchChatsByAccountId,
+  fetchMessageContextWithPhotos,
+  fetchMessagesWithPhotos,
+  getChatMessagesStats,
+  isChatAccessibleByAccount,
+  recordChats,
+  recordMessagesWithMedia,
+  retrieveMessages,
+} from '../models'
 import { embedContents } from '../utils/embed'
 
 /**
@@ -21,6 +31,15 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
 
   emitter.on('storage:fetch:messages', async ({ chatId, pagination }) => {
     logger.withFields({ chatId, pagination }).verbose('Fetching messages')
+
+    const accountId = ctx.getCurrentAccountId()
+    const hasAccess = (await isChatAccessibleByAccount(accountId, chatId)).expect('Failed to check chat access')
+
+    if (!hasAccess) {
+      ctx.withError(new Error('Unauthorized chat access'), 'Account does not have access to requested chat messages')
+      return
+    }
+
     const messages = (await fetchMessagesWithPhotos(chatId, pagination)).unwrap()
     emitter.emit('storage:messages', { messages })
   })
@@ -30,6 +49,14 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
     const safeAfter = Math.max(0, after)
 
     logger.withFields({ chatId, messageId, before: safeBefore, after: safeAfter }).verbose('Fetching message context')
+
+    const accountId = ctx.getCurrentAccountId()
+    const hasAccess = (await isChatAccessibleByAccount(accountId, chatId)).expect('Failed to check chat access')
+
+    if (!hasAccess) {
+      ctx.withError(new Error('Unauthorized chat access'), 'Account does not have access to requested message context')
+      return
+    }
 
     const messages = (await fetchMessageContextWithPhotos({ chatId, messageId, before: safeBefore, after: safeAfter })).unwrap()
 
@@ -72,13 +99,15 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
     await recordMessagesWithMedia(messages)
   })
 
-  emitter.on('storage:fetch:dialogs', async () => {
+  emitter.on('storage:fetch:dialogs', async (data) => {
     logger.verbose('Fetching dialogs')
 
-    const dbChats = (await fetchChats())?.unwrap()
+    const accountId = data?.accountId || ctx.getCurrentAccountId()
+
+    const dbChats = (await fetchChatsByAccountId(accountId))?.unwrap()
     const chatsMessageStats = (await getChatMessagesStats())?.unwrap()
 
-    logger.withFields({ dbChatsSize: dbChats.length, chatsMessageStatsSize: chatsMessageStats.length }).verbose('Chat message stats')
+    logger.withFields({ accountId, dbChatsSize: dbChats.length, chatsMessageStatsSize: chatsMessageStats.length }).verbose('Fetched dialogs for account')
 
     const dialogs = dbChats.map((chat) => {
       const chatMessageStats = chatsMessageStats.find(stats => stats.chat_id === chat.chat_id)
@@ -93,12 +122,13 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
     emitter.emit('storage:dialogs', { dialogs })
   })
 
-  emitter.on('storage:record:dialogs', async ({ dialogs }) => {
+  emitter.on('storage:record:dialogs', async ({ dialogs, accountId }) => {
     logger.withFields({
       size: dialogs.length,
       users: dialogs.filter(d => d.type === 'user').length,
       groups: dialogs.filter(d => d.type === 'group').length,
       channels: dialogs.filter(d => d.type === 'channel').length,
+      accountId,
     }).verbose('Recording dialogs')
 
     if (dialogs.length === 0) {
@@ -106,15 +136,26 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
       return
     }
 
-    const result = (await recordChats(dialogs))?.expect('Failed to record dialogs')
+    const result = (await recordChats(dialogs, accountId))?.expect('Failed to record dialogs')
     logger.withFields({ recorded: result.length }).verbose('Successfully recorded dialogs')
   })
 
   emitter.on('storage:search:messages', async (params) => {
     logger.withFields({ params }).verbose('Searching messages')
 
+    const accountId = ctx.getCurrentAccountId()
+
     if (params.content.length === 0) {
       return
+    }
+
+    if (params.chatId) {
+      const hasAccess = (await isChatAccessibleByAccount(accountId, params.chatId)).expect('Failed to check chat access')
+
+      if (!hasAccess) {
+        ctx.withError(new Error('Unauthorized chat access'), 'Account does not have access to requested chat messages')
+        return
+      }
     }
 
     // Prepare filters from params
@@ -130,10 +171,10 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
       if (embeddingResult)
         embedding = embeddingResult.embeddings[0]
 
-      dbMessages = (await retrieveMessages(params.chatId, { embedding, text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
+      dbMessages = (await retrieveMessages(accountId, params.chatId, { embedding, text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
     }
     else {
-      dbMessages = (await retrieveMessages(params.chatId, { text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
+      dbMessages = (await retrieveMessages(accountId, params.chatId, { text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
     }
 
     logger.withFields({ messages: dbMessages.length }).verbose('Retrieved messages')
