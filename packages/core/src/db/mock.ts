@@ -24,7 +24,7 @@ export async function mockDB(schema: Record<string, any>): Promise<CoreDB> {
   // Enable pgvector type in this in-memory database before applying schema
   // This mirrors the production pglite initialisation which runs:
   //   CREATE EXTENSION IF NOT EXISTS vector;
-  await (db as any).execute?.(sql`CREATE EXTENSION IF NOT EXISTS vector;`)
+  await db.execute?.(sql`CREATE EXTENSION IF NOT EXISTS vector;`)
 
   // Sync the in-memory DB with the provided schema definition
   const { apply } = await pushSchema(schema, db as any)

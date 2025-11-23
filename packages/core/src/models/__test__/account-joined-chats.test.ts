@@ -28,7 +28,7 @@ describe('account-joined-chats model', () => {
       insert,
     }
 
-    setDbInstanceForTests(fakeDb as any)
+    setDbInstanceForTests(fakeDb)
 
     await linkAccountToJoinedChat('account-1', 'joined-chat-1')
 
@@ -59,7 +59,7 @@ describe('account-joined-chats model', () => {
       select,
     }
 
-    setDbInstanceForTests(fakeDb as any)
+    setDbInstanceForTests(fakeDb)
 
     const result = await findJoinedChatIdsByAccountId('account-1')
 
@@ -87,7 +87,7 @@ describe('account-joined-chats model', () => {
       select,
     }
 
-    setDbInstanceForTests(fakeDb as any)
+    setDbInstanceForTests(fakeDb)
 
     const result = await findAccountIdsByJoinedChatId('joined-chat-1')
 
