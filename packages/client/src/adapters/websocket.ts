@@ -122,7 +122,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
   // https://github.com/moeru-ai/airi/blob/b55a76407d6eb725d74c5cd4bcb17ef7d995f305/apps/realtime-audio/src/pages/index.vue#L29-L37
   function sendEvent<T extends keyof WsEventToServer>(event: T, data?: WsEventToServerData<T>) {
     if (event !== 'server:event:register')
-      logger.log('Sending event', event, data)
+      logger.debug('Sending event', event, data)
 
     if (!wsSocket)
       return
@@ -241,7 +241,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
       const message = JSON.parse(rawMessage) as WsMessageToClient
 
       if (eventHandlers.has(message.type)) {
-        logger.log('Message received', message)
+        logger.debug('Message received', message)
       }
 
       if (eventHandlers.has(message.type)) {

@@ -34,7 +34,7 @@ export class MessageWindow {
       this.maxId = Math.max(Number(msgId), this.maxId)
     })
 
-    this.logger.log('Add batch', messages.length, `${sortedNewMessages[0].platformMessageId} - ${sortedNewMessages[sortedNewMessages.length - 1].platformMessageId}`, `direction: ${direction}`)
+    this.logger.debug('Add batch', messages.length, `${sortedNewMessages[0].platformMessageId} - ${sortedNewMessages[sortedNewMessages.length - 1].platformMessageId}`, `direction: ${direction}`)
 
     this.lastAccessTime = Date.now()
 
@@ -121,7 +121,7 @@ export class MessageWindow {
     }
 
     if (removedIds.length > 0) {
-      this.logger.log(`Cleaned up ${removedIds.length} messages (${direction}), removed: ${removedIds[0]} - ${removedIds[removedIds.length - 1]}`)
+      this.logger.debug(`Cleaned up ${removedIds.length} messages (${direction}), removed: ${removedIds[0]} - ${removedIds[removedIds.length - 1]}`)
     }
   }
 
@@ -139,6 +139,6 @@ export class MessageWindow {
     this.maxId = -Infinity
     this.lastAccessTime = Date.now()
 
-    this.logger.log('All messages and blob URLs cleared')
+    this.logger.debug('All messages and blob URLs cleared')
   }
 }
