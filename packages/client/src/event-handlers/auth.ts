@@ -20,6 +20,10 @@ export function registerBasicEventHandlers(
     useBridgeStore().getActiveSession()!.isConnected = true
   })
 
+  registerEventHandler('auth:disconnected', () => {
+    useBridgeStore().getActiveSession()!.isConnected = false
+  })
+
   // Core forwards updated StringSession to the client; let bridge store decide
   // whether to update current account or create a new slot (add-account flow).
   registerEventHandler('session:update', ({ session }) => {

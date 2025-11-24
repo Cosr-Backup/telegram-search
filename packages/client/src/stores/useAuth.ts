@@ -1,6 +1,7 @@
 import { useLogger } from '@guiiai/logg'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 
 import { useBridgeStore } from '../composables/useBridge'
 import { useMessageStore } from './useMessage'
@@ -16,6 +17,10 @@ export const useAuthStore = defineStore('session', () => {
 
   const activeSessionComputed = computed(() => websocketStore.getActiveSession())
   const isLoggedInComputed = computed(() => activeSessionComputed.value?.isConnected)
+
+  const attemptCounter = ref(0)
+  const MAX_ATTEMPTS = 3
+  let reconnectTimer: number | undefined
 
   /**
    * Best-effort auto-login using stored Telegram session string.
@@ -44,11 +49,45 @@ export const useAuthStore = defineStore('session', () => {
     }
   }
 
-  watch(() => activeSessionComputed.value?.isConnected, (isConnected) => {
-    if (isConnected) {
-      websocketStore.sendEvent('entity:me:fetch', undefined)
-    }
-  })
+  watch(
+    () => activeSessionComputed.value?.isConnected,
+    (isConnected, prevConnected) => {
+      const hasSession = !!activeSessionComputed.value?.session
+
+      if (isConnected) {
+        // Successful (re)connection: clear any pending reconnects and reset attempts.
+        if (reconnectTimer) {
+          window.clearTimeout(reconnectTimer)
+          reconnectTimer = undefined
+        }
+        websocketStore.sendEvent('entity:me:fetch', undefined)
+        attemptCounter.value = 0
+        return
+      }
+
+      // Below: disconnected path.
+      // Only treat as "unexpected disconnect" when:
+      // - we previously had a live connection, and
+      // - we still have a stored session (i.e. not a deliberate logout / new empty slot).
+      if (!prevConnected || !hasSession) {
+        attemptCounter.value = 0
+        return
+      }
+
+      if (attemptCounter.value >= MAX_ATTEMPTS) {
+        toast.error('Failed to reconnect to Telegram')
+        return
+      }
+
+      attemptCounter.value++
+
+      // Exponential backoff up to 10s between attempts to avoid hammering.
+      const delayMs = Math.min(1000 * (2 ** (attemptCounter.value - 1)), 10000)
+      reconnectTimer = window.setTimeout(() => {
+        void attemptLogin()
+      }, delayMs)
+    },
+  )
 
   // When switching the active account (slot) and the new slot has a stored
   // Telegram session but is not yet connected, automatically attempt login

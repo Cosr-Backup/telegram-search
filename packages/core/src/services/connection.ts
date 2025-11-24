@@ -131,6 +131,7 @@ export function createConnectionService(ctx: CoreContext) {
       }
       catch (error) {
         emitter.emit('auth:error', { error })
+        emitter.emit('auth:disconnected')
         return Err(withError(error, 'Failed to connect to Telegram'))
       }
     }
@@ -177,6 +178,7 @@ export function createConnectionService(ctx: CoreContext) {
       }
       catch (error) {
         emitter.emit('auth:error', { error })
+        emitter.emit('auth:disconnected')
         return Err(withError(error, 'Failed to connect to Telegram'))
       }
     }
@@ -221,6 +223,7 @@ export function createConnectionService(ctx: CoreContext) {
       if (client.connected) {
         await client.invoke(new Api.auth.LogOut())
         await client.disconnect()
+        emitter.emit('auth:disconnected')
       }
 
       client.session.delete()
