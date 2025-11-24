@@ -96,12 +96,16 @@ export function createConnectionService(ctx: CoreContext) {
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout connecting to Telegram')), 5000)),
         ])
         if (!isConnected) {
-          return Err(withError(new Error('Failed to connect to Telegram')))
+          return Err(withError('Failed to connect to Telegram'))
         }
 
         const isAuthorized = await client.isUserAuthorized()
         if (!isAuthorized) {
-          return Err(withError(new Error('User is not authorized')))
+          const error = withError('User is not authorized')
+          // Surface this as an auth-specific error so the frontend can fall
+          // back to manual login and optionally clear the stored session.
+          emitter.emit('auth:error', { error })
+          return Err(error)
         }
 
         // TODO: reactivity
@@ -112,14 +116,16 @@ export function createConnectionService(ctx: CoreContext) {
         const sessionString = await client.session.save() as unknown as string
         logger.withFields({ hasSession: !!sessionString }).verbose('Forwarding session to client')
 
+        // 1) Forward updated session to frontend so it can persist it.
         emitter.emit('session:update', { session: sessionString })
 
+        // 2) Attach client to context for subsequent services.
         ctx.setClient(client)
 
+        // 3) Finally signal that auth is connected; this will trigger
+        //    afterConnectedEventHandler, which will establish current
+        //    account ID and bootstrap dialogs/storage.
         emitter.emit('auth:connected')
-
-        // Emit me info
-        emitter.emit('entity:me:fetch')
 
         return Ok(client)
       }
@@ -141,7 +147,7 @@ export function createConnectionService(ctx: CoreContext) {
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout connecting to Telegram')), 5000)),
         ])
         if (!isConnected) {
-          return Err(withError(new Error('Failed to connect to Telegram')))
+          return Err(withError('Failed to connect to Telegram', 'Failed to connect to Telegram'))
         }
 
         const isAuthorized = await client.isUserAuthorized()
@@ -157,14 +163,15 @@ export function createConnectionService(ctx: CoreContext) {
         const sessionString = await client.session.save() as unknown as string
         logger.withFields({ hasSession: !!sessionString }).verbose('Forwarding session to client')
 
+        // 1) Forward updated session
         emitter.emit('session:update', { session: sessionString })
 
+        // 2) Attach client
         ctx.setClient(client)
 
+        // 3) Notify connected; afterConnectedEventHandler will establish
+        //    current account ID and bootstrap dialogs/storage.
         emitter.emit('auth:connected')
-
-        // Emit me info
-        emitter.emit('entity:me:fetch')
 
         return Ok(client)
       }
@@ -200,9 +207,9 @@ export function createConnectionService(ctx: CoreContext) {
             const { password } = await waitForEvent(emitter, 'auth:password')
             return password
           },
-          onError: (err: Error) => {
-            emitter.emit('auth:error', { error: err })
-            reject(withError(err, 'Failed to sign in to Telegram'))
+          onError: (error) => {
+            emitter.emit('auth:error', { error })
+            reject(withError(error, 'Failed to sign in to Telegram'))
           },
         })
 

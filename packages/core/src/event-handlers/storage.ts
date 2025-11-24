@@ -36,7 +36,7 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
     const hasAccess = (await isChatAccessibleByAccount(accountId, chatId)).expect('Failed to check chat access')
 
     if (!hasAccess) {
-      ctx.withError(new Error('Unauthorized chat access'), 'Account does not have access to requested chat messages')
+      ctx.withError('Unauthorized chat access', 'Account does not have access to requested chat messages')
       return
     }
 
@@ -54,7 +54,7 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
     const hasAccess = (await isChatAccessibleByAccount(accountId, chatId)).expect('Failed to check chat access')
 
     if (!hasAccess) {
-      ctx.withError(new Error('Unauthorized chat access'), 'Account does not have access to requested message context')
+      ctx.withError('Unauthorized chat access', 'Account does not have access to requested message context')
       return
     }
 
@@ -159,7 +159,7 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
       const hasAccess = (await isChatAccessibleByAccount(accountId, params.chatId)).expect('Failed to check chat access')
 
       if (!hasAccess) {
-        ctx.withError(new Error('Unauthorized chat access'), 'Account does not have access to requested chat messages')
+        ctx.withError('Unauthorized chat access', 'Account does not have access to requested chat messages')
         return
       }
     }

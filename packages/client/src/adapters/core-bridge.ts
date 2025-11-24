@@ -1,3 +1,4 @@
+import type { Config } from '@tg-search/common'
 import type { CoreContext, CoreEventData, FromCoreEvent, ToCoreEvent } from '@tg-search/core'
 import type { WsEventToClient, WsEventToClientData, WsEventToServer, WsEventToServerData, WsMessageToClient } from '@tg-search/server/types'
 
@@ -7,12 +8,12 @@ import type { SessionContext, StoredSession } from '../types/session'
 import defu from 'defu'
 
 import { initLogger, LoggerFormat, LoggerLevel, useLogger } from '@guiiai/logg'
-import { initConfig, useConfig } from '@tg-search/common'
-import { createCoreInstance, initDrizzle } from '@tg-search/core'
+import { generateDefaultConfig, initConfig } from '@tg-search/common'
+import { createCoreInstance, destroyCoreInstance, initDrizzle } from '@tg-search/core'
 import { useLocalStorage } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { getRegisterEventHandler, registerAllEventHandlers } from '../event-handlers'
 
@@ -21,7 +22,29 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
   // active-session-slot: index into storageSessions array
   const storageActiveSessionSlot = useLocalStorage<number>('core-bridge/active-session-slot', 0)
   const logger = useLogger('CoreBridge')
-  let ctx: CoreContext
+  let ctx: CoreContext | undefined
+  const config = useLocalStorage<Config>('core-bridge/config', generateDefaultConfig())
+
+  const activeSessionId = computed(() => {
+    const slot = storageActiveSessionSlot.value
+    const session = storageSessions.value[slot]
+    return session?.uuid ?? ''
+  })
+
+  // When switching accounts, destroy the existing CoreContext so that the
+  // next interaction will create a fresh instance for the new account.
+  watch(activeSessionId, (newId, oldId) => {
+    if (!oldId || newId === oldId)
+      return
+    if (!ctx)
+      return
+
+    logger.withFields({ oldId, newId }).debug('Active session changed, destroying CoreContext')
+    destroyCoreInstance(ctx).catch((error) => {
+      logger.withError(error).error('Failed to destroy CoreContext on account switch')
+    })
+    ctx = undefined
+  })
 
   const eventHandlers: ClientEventHandlerMap = new Map()
   const eventHandlersQueue: ClientEventHandlerQueueMap = new Map()
@@ -46,12 +69,6 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
   }
 
   ensureSessionInvariants()
-
-  const activeSessionId = computed(() => {
-    const slot = storageActiveSessionSlot.value
-    const session = storageSessions.value[slot]
-    return session?.uuid ?? ''
-  })
 
   function serializeError(err: unknown) {
     if (err instanceof Error) {
@@ -79,25 +96,10 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
 
   function ensureCtx() {
     if (!ctx) {
-      // TODO: use flags
-      const isDebug = !!import.meta.env.VITE_DEBUG
-      initLogger(isDebug ? LoggerLevel.Debug : LoggerLevel.Verbose, LoggerFormat.Pretty)
+      if (!config.value)
+        throw new Error('Core bridge is not initialized')
 
-      try {
-        const config = useConfig()
-        config.api.telegram.apiId ||= import.meta.env.VITE_TELEGRAM_APP_ID
-        config.api.telegram.apiHash ||= import.meta.env.VITE_TELEGRAM_APP_HASH
-
-        ctx = createCoreInstance(config)
-        initDrizzle(logger, config, {
-          debuggerWebSocketUrl: import.meta.env.VITE_DB_DEBUGGER_WS_URL as string,
-          isDatabaseDebugMode: import.meta.env.VITE_DB_DEBUG === 'true',
-        })
-      }
-      catch (error) {
-        console.error(error)
-        initConfig()
-      }
+      ctx = createCoreInstance(config.value)
     }
 
     return ctx
@@ -216,7 +218,7 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
    * Send event to core
    */
   function sendEvent<T extends keyof WsEventToServer>(event: T, data?: WsEventToServerData<T>) {
-    const ctx = ensureCtx()
+    const ctx = ensureCtx()!
     logger.withFields({ event, data }).debug('Receive event from client')
 
     try {
@@ -249,12 +251,29 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
       return
     }
 
-    await initConfig()
-    registerAllEventHandlers(registerEventHandler)
+    // TODO: use flags
+    const isDebug = !!import.meta.env.VITE_DEBUG
+    initLogger(isDebug ? LoggerLevel.Debug : LoggerLevel.Verbose, LoggerFormat.Pretty)
+
+    config.value = await initConfig()
+    config.value.api.telegram.apiId ||= import.meta.env.VITE_TELEGRAM_APP_ID
+    config.value.api.telegram.apiHash ||= import.meta.env.VITE_TELEGRAM_APP_HASH
+
+    await initDrizzle(logger, config.value, {
+      debuggerWebSocketUrl: import.meta.env.VITE_DB_DEBUGGER_WS_URL as string,
+      isDatabaseDebugMode: import.meta.env.VITE_DB_DEBUG === 'true',
+    })
 
     ensureSessionInvariants()
 
+    // Register event handlers once per CoreBridge lifecycle; each handler
+    // will register itself with core via server:event:register when needed.
+    registerAllEventHandlers(registerEventHandler)
+
+    // Emit an initial server:connected event so the UI knows core-bridge
+    // mode is available, mirroring websocket adapter behaviour.
     sendWsEvent({ type: 'server:connected', data: { sessionId: activeSessionId.value, connected: false } })
+
     isInitialized.value = true
   }
 

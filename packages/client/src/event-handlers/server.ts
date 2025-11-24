@@ -18,4 +18,9 @@ export function registerServerEventHandlers(
     // TODO: move it to view layer
     toast.error(String(error))
   })
+
+  registerEventHandler('core:error', ({ error }) => {
+    // TODO: move it to view layer
+    toast.error(String(error))
+  })
 }

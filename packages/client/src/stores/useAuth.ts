@@ -31,6 +31,11 @@ export const useAuthStore = defineStore('session', () => {
     useLogger('AuthStore').log('Attempting login')
     const activeSession = websocketStore.getActiveSession()
 
+    if (activeSession?.isConnected) {
+      websocketStore.sendEvent('entity:me:fetch', undefined)
+      return
+    }
+
     if (!activeSession?.isConnected && activeSession?.session) {
       websocketStore.sendEvent('auth:login', {
         phoneNumber: '',
@@ -43,7 +48,29 @@ export const useAuthStore = defineStore('session', () => {
     if (isConnected) {
       websocketStore.sendEvent('entity:me:fetch', undefined)
     }
-  }, { immediate: true })
+  })
+
+  // When switching the active account (slot) and the new slot has a stored
+  // Telegram session but is not yet connected, automatically attempt login
+  // using that session. This keeps multi-account switching symmetric between
+  // websocket and core-bridge modes.
+  watch(
+    () => ({
+      session: activeSessionComputed.value?.session,
+      isConnected: activeSessionComputed.value?.isConnected,
+    }),
+    ({ session, isConnected }, { session: prevSession }) => {
+      if (!session || isConnected)
+        return
+
+      // Only trigger when session value actually changes (i.e. switched to
+      // another account or session was updated).
+      if (session === prevSession)
+        return
+
+      void attemptLogin()
+    },
+  )
 
   function handleAuth() {
     function login(phoneNumber: string) {
@@ -93,8 +120,7 @@ export const useAuthStore = defineStore('session', () => {
     // Try to restore connection using stored session for the active slot.
     // If the session is invalid, core will emit auth:error and the user will
     // be guided through manual login as usual.
-    // FIXME
-    setTimeout(() => void attemptLogin(), 200)
+    void attemptLogin()
   }
 
   return {
@@ -102,7 +128,6 @@ export const useAuthStore = defineStore('session', () => {
     activeSessionComputed,
     auth: authStatus,
     handleAuth,
-    attemptLogin,
     isLoggedIn: isLoggedInComputed,
   }
 })

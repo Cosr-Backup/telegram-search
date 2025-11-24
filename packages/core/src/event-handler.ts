@@ -76,19 +76,24 @@ export function afterConnectedEventHandler(
   const { emitter } = ctx
 
   emitter.once('auth:connected', () => {
+    const entityService = useService(ctx, createEntityService)
     const messageService = useService(ctx, createMessageService)
     const dialogService = useService(ctx, createDialogService)
     const takeoutService = useService(ctx, createTakeoutService)
-    const entityService = useService(ctx, createEntityService)
     const gramEventsService = useService(ctx, createGramEventsService)
+
+    // Register entity handlers first so we can establish currentAccountId.
+    registerEntityEventHandlers(ctx)(entityService)
+
+    // Ensure current account ID is established before any dialog/storage access.
+    emitter.emit('entity:me:fetch')
 
     registerMessageEventHandlers(ctx)(messageService)
     registerDialogEventHandlers(ctx)(dialogService)
     registerTakeoutEventHandlers(ctx)(takeoutService)
-    registerEntityEventHandlers(ctx)(entityService)
     registerGramEventsEventHandlers(ctx)(gramEventsService)
 
-    // Init all entities
+    // Init all entities now that account context is ready.
     emitter.emit('dialog:fetch')
     gramEventsService.registerGramEvents()
   })
