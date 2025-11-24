@@ -3,6 +3,7 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 import { useBridgeStore } from '../composables/useBridge'
+import { useMessageStore } from './useMessage'
 
 export const useAuthStore = defineStore('session', () => {
   const websocketStore = useBridgeStore()
@@ -71,6 +72,9 @@ export const useAuthStore = defineStore('session', () => {
     }
 
     function switchAccount(sessionId: string) {
+      // When switching accounts, clear message window/state so that chats
+      // from the previous account do not bleed into the new one.
+      useMessageStore().reset()
       websocketStore.switchAccount(sessionId)
     }
 
