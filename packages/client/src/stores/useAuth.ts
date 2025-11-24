@@ -1,16 +1,8 @@
-import type { CoreUserEntity } from '@tg-search/core'
-
+import { useLogger } from '@guiiai/logg'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 import { useBridgeStore } from '../composables/useBridge'
-import { useChatStore } from './useChat'
-
-export interface SessionContext {
-  phoneNumber?: string
-  isConnected?: boolean
-  me?: CoreUserEntity
-}
 
 export const useAuthStore = defineStore('session', () => {
   const websocketStore = useBridgeStore()
@@ -24,10 +16,25 @@ export const useAuthStore = defineStore('session', () => {
   const activeSessionComputed = computed(() => websocketStore.getActiveSession())
   const isLoggedInComputed = computed(() => activeSessionComputed.value?.isConnected)
 
+  /**
+   * Best-effort auto-login using stored Telegram session string.
+   *
+   * Rules:
+   * - Only runs when there is NO active connection.
+   * - Uses the active slot's stored session (if any).
+   * - Sends empty phoneNumber because Telegram will skip sign-in flow when
+   *   the session is still valid. If the session is invalid, core will emit
+   *   auth:error and frontend should fall back to manual login.
+   */
   const attemptLogin = async () => {
+    useLogger('AuthStore').log('Attempting login')
     const activeSession = websocketStore.getActiveSession()
-    if (!activeSession?.isConnected && activeSession?.phoneNumber) {
-      handleAuth().login(activeSession.phoneNumber)
+
+    if (!activeSession?.isConnected && activeSession?.session) {
+      websocketStore.sendEvent('auth:login', {
+        phoneNumber: '',
+        session: activeSession.session,
+      })
     }
   }
 
@@ -39,13 +46,11 @@ export const useAuthStore = defineStore('session', () => {
 
   function handleAuth() {
     function login(phoneNumber: string) {
-      const session = websocketStore.sessions.get(websocketStore.activeSessionId)
-
-      if (session)
-        session!.phoneNumber = phoneNumber
+      const session = websocketStore.getActiveSession()
 
       websocketStore.sendEvent('auth:login', {
         phoneNumber,
+        session: session?.session,
       })
     }
 
@@ -62,20 +67,30 @@ export const useAuthStore = defineStore('session', () => {
     }
 
     function logout() {
-      websocketStore.getActiveSession()!.isConnected = false
-      websocketStore.sendEvent('auth:logout', undefined)
-      websocketStore.cleanup()
+      websocketStore.logoutCurrentAccount()
     }
 
-    return { login, submitCode, submitPassword, logout }
+    function switchAccount(sessionId: string) {
+      websocketStore.switchAccount(sessionId)
+    }
+
+    function addNewAccount() {
+      return websocketStore.addNewAccount()
+    }
+
+    function getAllAccounts() {
+      return websocketStore.getAllSessions()
+    }
+
+    return { login, submitCode, submitPassword, logout, switchAccount, addNewAccount, getAllAccounts }
   }
 
   function init() {
-    // Auto login
-    // useConfig().api.telegram.autoReconnect && attemptLogin()
-
-    // Initialize chat store to load dialogs from database regardless of authentication status
-    useChatStore().init()
+    // Try to restore connection using stored session for the active slot.
+    // If the session is invalid, core will emit auth:error and the user will
+    // be guided through manual login as usual.
+    // FIXME
+    setTimeout(() => void attemptLogin(), 200)
   }
 
   return {
