@@ -59,7 +59,7 @@ const username = computed(() => activeSessionComputed.value?.me?.username)
 const userId = computed(() => activeSessionComputed.value?.me?.id)
 const allAccounts = computed(() => authStore.handleAuth().getAllAccounts())
 const otherAccounts = computed(() => {
-  return allAccounts.value.filter(account => account.id !== activeSessionId.value)
+  return allAccounts.value.filter(account => account.uuid !== activeSessionId.value)
 })
 </script>
 
@@ -98,24 +98,24 @@ const otherAccounts = computed(() => {
       <div class="space-y-1">
         <button
           v-for="account in otherAccounts"
-          :key="account.id"
+          :key="account.uuid"
           class="w-full flex items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-neutral-100 dark:hover:bg-gray-700"
-          @click="handleSwitchAccount(account.id)"
+          @click="handleSwitchAccount(account.uuid)"
         >
           <EntityAvatar
-            v-if="account.me?.id"
-            :id="account.me.id"
+            v-if="account.metadata.me?.id"
+            :id="account.metadata.me.id"
             entity="self"
             entity-type="user"
-            :name="account.me?.username"
+            :name="account.metadata.me?.username"
             size="sm"
           />
           <div class="flex flex-1 flex-col overflow-hidden">
             <span class="truncate text-sm text-gray-900 font-medium dark:text-gray-100">
-              {{ account.me?.username || (account.me?.id ? `ID: ${account.me.id}` : t('settings.notLoggedIn')) }}
+              {{ account.metadata.me?.username || (account.metadata.me?.id ? `ID: ${account.metadata.me.id}` : t('settings.notLoggedIn')) }}
             </span>
-            <span v-if="account.me?.id" class="truncate text-xs text-gray-600 dark:text-gray-400">
-              ID: {{ account.me.id }}
+            <span v-if="account.metadata.me?.id" class="truncate text-xs text-gray-600 dark:text-gray-400">
+              ID: {{ account.metadata.me.id }}
             </span>
           </div>
         </button>

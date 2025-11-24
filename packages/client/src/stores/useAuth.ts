@@ -79,7 +79,7 @@ export const useAuthStore = defineStore('session', () => {
     }
 
     function getAllAccounts() {
-      return websocketStore.getAllSessions()
+      return websocketStore.sessions
     }
 
     return { login, submitCode, submitPassword, logout, switchAccount, addNewAccount, getAllAccounts }

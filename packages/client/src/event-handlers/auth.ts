@@ -23,8 +23,11 @@ export function registerBasicEventHandlers(
   // Core forwards updated StringSession to the client; let bridge store decide
   // whether to update current account or create a new slot (add-account flow).
   registerEventHandler('session:update', ({ session }) => {
+    // session:update always applies to the currently active slot. The
+    // auth flow is responsible for selecting the correct active account
+    // before initiating login.
     const bridgeStore = useBridgeStore()
-    bridgeStore.applySessionUpdate(session)
+    bridgeStore.updateActiveSessionMetadata({ session })
   })
 
   registerEventHandler('auth:error', ({ error }) => {

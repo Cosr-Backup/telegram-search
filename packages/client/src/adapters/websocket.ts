@@ -21,13 +21,6 @@ export const useWebsocketStore = defineStore('websocket', () => {
   // active-session-slot: index into storageSessions array
   const storageActiveSessionSlot = useLocalStorage<number>('websocket/active-session-slot', 0)
   const logger = useLogger('WebSocket')
-  /**
-   * When adding a new account, we first navigate to the login page and only
-   * create/activate a new slot after successful login (session:update).
-   * This ref temporarily holds the uuid for the "pending" account.
-   */
-  const pendingSessionId = ref<string | null>(null)
-
   const ensureSessionInvariants = () => {
     if (!Array.isArray(storageSessions.value))
       storageSessions.value = []
@@ -58,40 +51,55 @@ export const useWebsocketStore = defineStore('websocket', () => {
     return storageSessions.value[slot]?.metadata
   }
 
-  const updateActiveSession = (sessionId: string, partialSession: Partial<SessionContext>) => {
-    if (!sessionId) {
-      // create a fresh uuid when caller does not care about specific id
-      sessionId = uuidv4()
-    }
+  /**
+   * Update metadata for the active session slot by shallow-merging the patch.
+   * We intentionally keep this focused on the active slot to avoid the
+   * previous "upsert by id" behavior, which made the control flow hard to
+   * reason about.
+   */
+  const updateActiveSessionMetadata = (patch: Partial<SessionContext>) => {
+    const index = storageActiveSessionSlot.value
+    const existing = storageSessions.value[index]
+    if (!existing)
+      return
 
-    const currentIndex = storageSessions.value.findIndex(session => session.uuid === sessionId)
-    const sessionIndex = currentIndex === -1 ? storageSessions.value.length : currentIndex
-    const existing = storageSessions.value[sessionIndex]
-    const existingMetadata = existing?.metadata ?? {}
-    const mergedMetadata = defu({}, partialSession, existingMetadata) as SessionContext
-
-    const updatedSession: StoredSession = {
-      uuid: existing?.uuid ?? sessionId,
-      sessionString: existing?.sessionString,
-      metadata: mergedMetadata,
-    }
+    const mergedMetadata = defu({}, patch, existing.metadata ?? {}) as SessionContext
 
     const sessionsCopy = [...storageSessions.value]
-    sessionsCopy[sessionIndex] = updatedSession
+    sessionsCopy[index] = {
+      ...existing,
+      metadata: mergedMetadata,
+    }
     storageSessions.value = sessionsCopy
-    storageActiveSessionSlot.value = sessionIndex
+  }
+
+  /**
+   * Update metadata for a specific session identified by its uuid.
+   * Unlike the old implementation, this will NOT create new slots; if the
+   * session is not found, it simply does nothing.
+   */
+  const updateSessionMetadataById = (sessionId: string, patch: Partial<SessionContext>) => {
+    if (!sessionId)
+      return
+
+    const index = storageSessions.value.findIndex(session => session.uuid === sessionId)
+    if (index === -1)
+      return
+
+    const existing = storageSessions.value[index]
+    const mergedMetadata = defu({}, patch, existing.metadata ?? {}) as SessionContext
+
+    const sessionsCopy = [...storageSessions.value]
+    sessionsCopy[index] = {
+      ...existing,
+      metadata: mergedMetadata,
+    }
+    storageSessions.value = sessionsCopy
   }
 
   const cleanup = () => {
     storageSessions.value = []
     storageActiveSessionSlot.value = 0
-  }
-
-  const getAllSessions = () => {
-    return storageSessions.value.map(session => ({
-      id: session.uuid,
-      ...session.metadata,
-    }))
   }
 
   const wsUrlComputed = computed(() => {
@@ -101,23 +109,46 @@ export const useWebsocketStore = defineStore('websocket', () => {
     return `${protocol}//${host}${WS_API_BASE}?sessionId=${sessionId}`
   })
 
-  const wsSocket = ref(useWebSocket<keyof WsMessageToClient>(wsUrlComputed, {
-    onDisconnected: () => {
-      logger.log('Disconnected')
-    },
-  }))
+  const eventHandlers: ClientEventHandlerMap = new Map()
+  const eventHandlersQueue: ClientEventHandlerQueueMap = new Map()
+  const isInitialized = ref(false)
+
+  let wsSocket: ReturnType<typeof useWebSocket<keyof WsMessageToClient>>
 
   const createWsMessage: ClientCreateWsMessageFn = (type, data) => {
     return { type, data } as WsMessageToServer
   }
 
   // https://github.com/moeru-ai/airi/blob/b55a76407d6eb725d74c5cd4bcb17ef7d995f305/apps/realtime-audio/src/pages/index.vue#L29-L37
-  const sendEvent: ClientSendEventFn = (event, data) => {
+  function sendEvent<T extends keyof WsEventToServer>(event: T, data?: WsEventToServerData<T>) {
     if (event !== 'server:event:register')
       logger.log('Sending event', event, data)
 
-    wsSocket.value!.send(JSON.stringify(createWsMessage(event, data)))
+    if (!wsSocket)
+      return
+
+    wsSocket.send(JSON.stringify(createWsMessage(event, data)))
   }
+
+  const registerEventHandler = getRegisterEventHandler(eventHandlers, sendEvent)
+
+  function handleWsConnected() {
+    logger.log('Connected')
+    /**
+     * Each WebSocket connection (and reconnection) needs to inform the
+     * server which events it is interested in. We simply re-register all
+     * handlers here; the server-side implementation deduplicates listeners
+     * per account, so this does not leak.
+     */
+    registerAllEventHandlers(registerEventHandler)
+  }
+
+  wsSocket = useWebSocket<keyof WsMessageToClient>(wsUrlComputed, {
+    onConnected: handleWsConnected,
+    onDisconnected: () => {
+      logger.log('Disconnected')
+    },
+  })
 
   const switchAccount = (sessionId: string) => {
     const index = storageSessions.value.findIndex(session => session.uuid === sessionId)
@@ -125,28 +156,32 @@ export const useWebsocketStore = defineStore('websocket', () => {
       storageActiveSessionSlot.value = index
       logger.withFields({ sessionId }).log('Switched to account')
       // WebSocket will reconnect with the new sessionId in URL
-      wsSocket.value.close()
+      wsSocket.close()
     }
   }
 
   const addNewAccount = () => {
-    // Mark that the next successful login should create a brand new slot.
-    pendingSessionId.value = uuidv4()
-    return pendingSessionId.value
+    // Create a brand new slot immediately and switch to it.
+    const newId = uuidv4()
+    const sessionsCopy = [...storageSessions.value, {
+      uuid: newId,
+      metadata: {},
+    } satisfies StoredSession]
+
+    storageSessions.value = sessionsCopy
+    storageActiveSessionSlot.value = sessionsCopy.length - 1
+
+    return newId
   }
 
   /**
-   * Apply session:update to either the current active account or, when adding
-   * a new account, to a freshly created slot identified by pendingSessionId.
+   * Apply session:update to the current active account.
+   *
+   * We deliberately keep this simple: whoever initiated the login flow is
+   * responsible for selecting the correct active slot beforehand.
    */
   const applySessionUpdate = (session: string) => {
-    if (pendingSessionId.value) {
-      updateActiveSession(pendingSessionId.value, { session })
-      pendingSessionId.value = null
-    }
-    else {
-      updateActiveSession(activeSessionId.value, { session })
-    }
+    updateActiveSessionMetadata({ session })
   }
 
   const logoutCurrentAccount = async () => {
@@ -173,11 +208,6 @@ export const useWebsocketStore = defineStore('websocket', () => {
     sendEvent('auth:logout', undefined)
   }
 
-  const eventHandlers: ClientEventHandlerMap = new Map()
-  const eventHandlersQueue: ClientEventHandlerQueueMap = new Map()
-  const registerEventHandler = getRegisterEventHandler(eventHandlers, sendEvent)
-  const isInitialized = ref(false)
-
   function init() {
     if (isInitialized.value) {
       logger.log('Already initialized, skipping')
@@ -185,8 +215,6 @@ export const useWebsocketStore = defineStore('websocket', () => {
     }
 
     ensureSessionInvariants()
-
-    registerAllEventHandlers(registerEventHandler)
     isInitialized.value = true
   }
 
@@ -205,7 +233,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
   }
 
   // https://github.com/moeru-ai/airi/blob/b55a76407d6eb725d74c5cd4bcb17ef7d995f305/apps/realtime-audio/src/pages/index.vue#L95-L123
-  watch(() => wsSocket.value.data, (rawMessage) => {
+  watch(wsSocket.data, (rawMessage) => {
     if (!rawMessage)
       return
 
@@ -253,12 +281,12 @@ export const useWebsocketStore = defineStore('websocket', () => {
     sessions: storageSessions,
     activeSessionId,
     getActiveSession,
-    updateActiveSession,
+    updateActiveSessionMetadata,
+    updateSessionMetadataById,
     switchAccount,
     addNewAccount,
     applySessionUpdate,
     logoutCurrentAccount,
-    getAllSessions,
     cleanup,
 
     sendEvent,

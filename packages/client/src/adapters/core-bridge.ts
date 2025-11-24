@@ -20,13 +20,6 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
   const storageSessions = useLocalStorage<StoredSession[]>('core-bridge/sessions', [])
   // active-session-slot: index into storageSessions array
   const storageActiveSessionSlot = useLocalStorage<number>('core-bridge/active-session-slot', 0)
-  /**
-   * When adding a new account, we first navigate to the login page and only
-   * create/activate a new slot after successful login (session:update).
-   * This ref temporarily holds the uuid for the "pending" account.
-   */
-  const pendingSessionId = ref<string | null>(null)
-
   const logger = useLogger('CoreBridge')
   let ctx: CoreContext
 
@@ -115,26 +108,47 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
     return storageSessions.value[slot]?.metadata
   }
 
-  const updateActiveSession = (sessionId: string, partialSession: Partial<SessionContext>) => {
-    if (!sessionId)
-      sessionId = uuidv4()
+  /**
+   * Update metadata for the active session slot by shallow-merging the patch.
+   * Browser-core mode reuses the same session layout as websocket mode.
+   */
+  const updateActiveSessionMetadata = (patch: Partial<SessionContext>) => {
+    const index = storageActiveSessionSlot.value
+    const existing = storageSessions.value[index]
+    if (!existing)
+      return
 
-    const currentIndex = storageSessions.value.findIndex(session => session.uuid === sessionId)
-    const sessionIndex = currentIndex === -1 ? storageSessions.value.length : currentIndex
-    const existing = storageSessions.value[sessionIndex]
-    const existingMetadata = existing?.metadata ?? {}
-    const mergedMetadata = defu({}, partialSession, existingMetadata) as SessionContext
-
-    const updatedSession: StoredSession = {
-      uuid: existing?.uuid ?? sessionId,
-      sessionString: existing?.sessionString,
-      metadata: mergedMetadata,
-    }
+    const mergedMetadata = defu({}, patch, existing.metadata ?? {}) as SessionContext
 
     const sessionsCopy = [...storageSessions.value]
-    sessionsCopy[sessionIndex] = updatedSession
+    sessionsCopy[index] = {
+      ...existing,
+      metadata: mergedMetadata,
+    }
     storageSessions.value = sessionsCopy
-    storageActiveSessionSlot.value = sessionIndex
+  }
+
+  /**
+   * Update metadata for a specific session identified by its uuid.
+   * Does nothing if the session does not exist.
+   */
+  const updateSessionMetadataById = (sessionId: string, patch: Partial<SessionContext>) => {
+    if (!sessionId)
+      return
+
+    const index = storageSessions.value.findIndex(session => session.uuid === sessionId)
+    if (index === -1)
+      return
+
+    const existing = storageSessions.value[index]
+    const mergedMetadata = defu({}, patch, existing.metadata ?? {}) as SessionContext
+
+    const sessionsCopy = [...storageSessions.value]
+    sessionsCopy[index] = {
+      ...existing,
+      metadata: mergedMetadata,
+    }
+    storageSessions.value = sessionsCopy
   }
 
   const switchAccount = (sessionId: string) => {
@@ -146,23 +160,27 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
   }
 
   const addNewAccount = () => {
-    // Mark that the next successful login should create a brand new slot.
-    pendingSessionId.value = uuidv4()
-    return pendingSessionId.value
+    // Create a brand new slot immediately and switch to it.
+    const newId = uuidv4()
+    const sessionsCopy = [...storageSessions.value, {
+      uuid: newId,
+      metadata: {},
+    } satisfies StoredSession]
+
+    storageSessions.value = sessionsCopy
+    storageActiveSessionSlot.value = sessionsCopy.length - 1
+
+    return newId
   }
 
   /**
-   * Apply session:update to either the current active account or, when adding
-   * a new account, to a freshly created slot identified by pendingSessionId.
+   * Apply session:update to the current active account.
+   *
+   * We rely on the caller to select the appropriate active slot before
+   * triggering the login flow.
    */
   const applySessionUpdate = (session: string) => {
-    if (pendingSessionId.value) {
-      updateActiveSession(pendingSessionId.value, { session })
-      pendingSessionId.value = null
-    }
-    else {
-      updateActiveSession(activeSessionId.value, { session })
-    }
+    updateActiveSessionMetadata({ session })
   }
 
   const logoutCurrentAccount = async () => {
@@ -192,13 +210,6 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
   const cleanup = () => {
     storageSessions.value = []
     storageActiveSessionSlot.value = 0
-  }
-
-  const getAllSessions = () => {
-    return storageSessions.value.map(session => ({
-      id: session.uuid,
-      ...session.metadata,
-    }))
   }
 
   /**
@@ -298,12 +309,12 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
     sessions: storageSessions,
     activeSessionId,
     getActiveSession,
-    updateActiveSession,
+    updateActiveSessionMetadata,
+    updateSessionMetadataById,
     switchAccount,
     addNewAccount,
     applySessionUpdate,
     logoutCurrentAccount,
-    getAllSessions,
     cleanup,
 
     sendEvent,
