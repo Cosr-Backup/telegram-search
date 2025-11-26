@@ -1,8 +1,25 @@
-# ---------------------------------
-# 1. Git & IDE
-# ---------------------------------
+# Git
 .git
 .gitignore
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+.next
+out
+
+# Development
+.env
+.env.local
+.env*.local
+*.log
+logs
+
+# IDE
 .vscode
 .idea
 *.swp
@@ -10,63 +27,26 @@
 *~
 .DS_Store
 
-# ---------------------------------
-# 2. Dependencies & Cache
-# ---------------------------------
-node_modules
-**/node_modules
-# pnpm cache directory
-.pnpm-store
-# TypeScript build cache
-*.tsbuildinfo
-.eslintcache
-.cache
-
-# ---------------------------------
-# 3. Build Outputs
-# ---------------------------------
-dist
-**/dist
-out
-.next
+# Testing
 coverage
 .nyc_output
 
-# ---------------------------------
-# 4. Config & Secrets
-# ---------------------------------
-.env
-.env.*
-# Ignore all real configs in config directory
-config/*
-!config/config.example.yaml
+# Misc
+*.md
+!README.md
+docs
+README_*.md
 
-# ---------------------------------
-# 5. Runtime Data protection
-# ---------------------------------
+# Data (重要：避免复制运行时数据)
 data/db.pglite
 data/sessions/*.session
-*.log
-logs
+
+# Temp files
 *.tmp
 tmp
 temp
 
-# ---------------------------------
-# 6. Documentation & Root Clutter
-# ---------------------------------
-# Ignore docs directory
-docs/
-*.md
-!README.md
-README_*.md
+# Cache
+.cache
+.eslintcache
 
-# Ignore root tool configs to reduce clutter
-renovate.json
-bump.config.ts
-cspell.config.yaml
-CONTRIBUTING.md
-CODE_OF_CONDUCT.md
-SECURITY.md
-CLAUDE.md
-LICENSE

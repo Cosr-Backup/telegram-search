@@ -1,4 +1,3 @@
-import type { Logger } from '@guiiai/logg'
 import type { CoreMessage } from '@tg-search/core'
 
 import { useLogger } from '@guiiai/logg'
@@ -10,7 +9,7 @@ export class MessageWindow {
   minId: number = Infinity
   maxId: number = -Infinity
   lastAccessTime: number = Date.now()
-  logger: Logger = useLogger('MessageWindow')
+  logger = useLogger('MessageWindow')
 
   readonly maxSize: number
 
