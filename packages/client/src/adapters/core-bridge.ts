@@ -82,6 +82,7 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
       let toSerialize: unknown = data
 
       // Normalise error field without mutating original object
+      // FIXME
       if (data && typeof data === 'object' && 'error' in data) {
         const withError = data as { error: unknown }
         toSerialize = {
