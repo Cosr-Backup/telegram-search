@@ -14,13 +14,8 @@ export function registerServerEventHandlers(
     useBridgeStore().updateSessionMetadataById(data.sessionId, { isConnected: data.connected })
   })
 
-  registerEventHandler('server:error', ({ error }) => {
+  registerEventHandler('core:error', ({ error, description }) => {
     // TODO: move it to view layer
-    toast.error(error)
-  })
-
-  registerEventHandler('core:error', ({ error }) => {
-    // TODO: move it to view layer
-    toast.error(error)
+    toast.error(error, { description })
   })
 }

@@ -6,7 +6,6 @@ import { useLogger } from '@guiiai/logg'
 
 export interface WsEventFromServer {
   'server:connected': (data: { sessionId: string, connected: boolean }) => void
-  'server:error': (data: { error: string }) => void
 }
 
 export interface WsEventFromClient {
