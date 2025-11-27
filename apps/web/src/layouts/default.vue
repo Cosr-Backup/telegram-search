@@ -64,12 +64,8 @@ const userDropdownOpen = ref(false)
 
 const chatStore = useChatStore()
 const chats = computed(() => chatStore.chats)
-const syncedChats = computed(() => chatStore.syncedChats)
 const chatsFiltered = computed(() => {
   return chats.value.filter(chat => chat.name.toLowerCase().includes(searchParams.value.toLowerCase()))
-})
-const syncedChatsFiltered = computed(() => {
-  return syncedChats.value.filter(chat => chat.name.toLowerCase().includes(searchParams.value.toLowerCase()))
 })
 
 const { selectedGroup } = storeToRefs(useSettingsStore())
@@ -85,9 +81,6 @@ const activeChatGroup = computed(() => {
 
 // Filtered chats by active group
 const activeGroupChats = computed(() => {
-  if (activeChatGroup.value === 'synced') {
-    return syncedChatsFiltered.value
-  }
   return chatsFiltered.value.filter(chat => chat.type === activeChatGroup.value)
 })
 
@@ -251,16 +244,7 @@ watch(activeGroupChats, (list) => {
         class="min-h-0 flex flex-1 flex-col border-t"
       >
         <!-- Tab selector -->
-        <div class="flex items-center gap-1 overflow-x-auto border-b p-2">
-          <button
-            :class="{ 'bg-accent text-accent-foreground': activeChatGroup === 'synced' }"
-            class="flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-            @click="toggleActiveChatGroup('synced')"
-          >
-            <span class="i-lucide-database h-4 w-4" />
-            <span>{{ t('chatGroups.synced') }}</span>
-          </button>
-
+        <div class="flex items-center gap-1 border-b p-2">
           <button
             :class="{ 'bg-accent text-accent-foreground': activeChatGroup === 'user' }"
             class="flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
