@@ -16,11 +16,11 @@ export function registerServerEventHandlers(
 
   registerEventHandler('server:error', ({ error }) => {
     // TODO: move it to view layer
-    toast.error(String(error))
+    toast.error(error)
   })
 
   registerEventHandler('core:error', ({ error }) => {
     // TODO: move it to view layer
-    toast.error(String(error))
+    toast.error(error)
   })
 }

@@ -15,7 +15,7 @@ export interface ClientInstanceEventToCore {
 }
 
 export interface ClientInstanceEventFromCore {
-  'core:error': (data: { error?: string | Error | unknown }) => void
+  'core:error': (data: { error: string, description?: string }) => void
 }
 
 // ============================================================================

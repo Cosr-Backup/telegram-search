@@ -67,31 +67,12 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
     })
   })
 
-  function serializeError(err: unknown) {
-    if (err instanceof Error) {
-      return err.message
-    }
-    return String(err ?? 'Unknown error')
-  }
-
   function deepClone<T>(data?: T): T | undefined {
     if (!data)
       return data
 
     try {
-      let toSerialize: unknown = data
-
-      // Normalise error field without mutating original object
-      // FIXME
-      if (data && typeof data === 'object' && 'error' in data) {
-        const withError = data as { error: unknown }
-        toSerialize = {
-          ...(data as object),
-          error: serializeError(withError.error),
-        }
-      }
-
-      return JSON.parse(JSON.stringify(toSerialize)) as T
+      return JSON.parse(JSON.stringify(data)) as T
     }
     catch (error) {
       logger.withError(error).error('Failed to deep clone data')

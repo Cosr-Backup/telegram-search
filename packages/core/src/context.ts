@@ -28,7 +28,7 @@ function createErrorHandler(emitter: CoreEmitter) {
     }
 
     // Emit raw error for frontend to handle (i18n, UI, etc.)
-    emitter.emit('core:error', { error })
+    emitter.emit('core:error', { error: error instanceof Error ? error.message : String(error), description })
 
     // Log error details
     if (error instanceof Error) {

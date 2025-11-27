@@ -141,9 +141,9 @@ describe('storage event handlers - message access control', () => {
     // For this test, deny access
     ;(isChatAccessibleByAccount as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(Ok(false))
 
-    const errorPromise = new Promise<Error>((resolve) => {
+    const errorPromise = new Promise<string>((resolve) => {
       ctx.emitter.on('core:error', ({ error }) => {
-        resolve(error as Error)
+        resolve(error)
       })
     })
 
@@ -154,7 +154,7 @@ describe('storage event handlers - message access control', () => {
 
     const error = await errorPromise
 
-    expect(error).toBeInstanceOf(Error)
+    expect(error).toBe('Unauthorized chat access')
     expect(isChatAccessibleByAccount).toHaveBeenCalledWith(ACCOUNT_ID, CHAT_ID)
     expect(fetchMessagesWithPhotos).not.toHaveBeenCalled()
   })
@@ -171,9 +171,9 @@ describe('storage event handlers - message access control', () => {
     // For this test, deny access for this chat
     ;(isChatAccessibleByAccount as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(Ok(false))
 
-    const errorPromise = new Promise<Error>((resolve) => {
+    const errorPromise = new Promise<string>((resolve) => {
       ctx.emitter.on('core:error', ({ error }) => {
-        resolve(error as Error)
+        resolve(error)
       })
     })
 
@@ -186,7 +186,7 @@ describe('storage event handlers - message access control', () => {
 
     const error = await errorPromise
 
-    expect(error).toBeInstanceOf(Error)
+    expect(error).toBe('Unauthorized chat access')
     expect(isChatAccessibleByAccount).toHaveBeenCalledWith(ACCOUNT_ID, CHAT_ID)
     expect(retrieveMessages).not.toHaveBeenCalled()
   })

@@ -6,7 +6,7 @@ import { useLogger } from '@guiiai/logg'
 
 export interface WsEventFromServer {
   'server:connected': (data: { sessionId: string, connected: boolean }) => void
-  'server:error': (data: { error?: string | Error | unknown }) => void
+  'server:error': (data: { error: string }) => void
 }
 
 export interface WsEventFromClient {
@@ -41,13 +41,6 @@ export function sendWsEvent<T extends keyof WsEventToClient>(
   peer.send(createWsMessage(event, data))
 }
 
-function serializeError(err: unknown) {
-  if (err instanceof Error) {
-    return err.message
-  }
-  return String(err ?? 'Unknown error')
-}
-
 export function createWsMessage<T extends keyof WsEventToClient>(
   type: T,
   data: WsEventToClientData<T>,
@@ -58,10 +51,6 @@ export function createWsMessage<T extends keyof WsEventToClient>(
     if (stringifiedData.length > 1024 * 1024) {
       useLogger().withFields({ type, length: stringifiedData.length }).warn('Dropped event data')
       return { type, data: undefined } as Extract<WsMessageToClient, { type: T }>
-    }
-
-    if (data && 'error' in data) {
-      data.error = serializeError(data.error)
     }
 
     return { type, data } as Extract<WsMessageToClient, { type: T }>
