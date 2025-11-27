@@ -1,4 +1,5 @@
 import type { chatMessagesTable } from '../../schemas/chat-messages'
+import type { JoinedChatType } from '../../schemas/joined-chats'
 import type { CoreRetrievalMessages } from '../../types/events'
 import type { CoreMessage } from '../../types/message'
 
@@ -54,6 +55,7 @@ export function convertToCoreMessageFromDB(message: DBSelectMessage): CoreMessag
 
 export function convertToDBInsertMessage(
   ownerAccountId: string | null | undefined,
+  type: JoinedChatType,
   message: CoreMessage,
 ): DBInsertMessage {
   const msg: DBInsertMessage = {
@@ -63,6 +65,7 @@ export function convertToDBInsertMessage(
     from_name: message.fromName,
     from_user_uuid: message.fromUserUuid,
     in_chat_id: message.chatId,
+    in_chat_type: type,
     content: message.content,
     is_reply: message.reply.isReply,
     reply_to_name: message.reply.replyToName,

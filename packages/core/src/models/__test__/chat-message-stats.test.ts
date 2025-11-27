@@ -50,6 +50,7 @@ describe('chat-message-stats model', () => {
         from_id: 'user-1',
         from_name: 'User 1',
         in_chat_id: '1001',
+        in_chat_type: 'user',
         content: 'Hello 1',
       },
       {
@@ -58,6 +59,7 @@ describe('chat-message-stats model', () => {
         from_id: 'user-1',
         from_name: 'User 1',
         in_chat_id: '1001',
+        in_chat_type: 'user',
         content: 'Hello 2',
       },
       {
@@ -66,6 +68,7 @@ describe('chat-message-stats model', () => {
         from_id: 'user-2',
         from_name: 'User 2',
         in_chat_id: '1002',
+        in_chat_type: 'user',
         content: 'Hi',
       },
     ])
@@ -104,6 +107,7 @@ describe('chat-message-stats model', () => {
         from_id: 'user-1',
         from_name: 'User 1',
         in_chat_id: '1001',
+        in_chat_type: 'user',
         content: 'Hello 1',
       },
       {
@@ -112,6 +116,7 @@ describe('chat-message-stats model', () => {
         from_id: 'user-1',
         from_name: 'User 1',
         in_chat_id: '1001',
+        in_chat_type: 'user',
         content: 'Hello 2',
       },
     ])

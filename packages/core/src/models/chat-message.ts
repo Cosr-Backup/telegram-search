@@ -3,6 +3,7 @@
 import type { CorePagination } from '@tg-search/common'
 
 import type { CoreDB, CoreTransaction } from '../db'
+import type { JoinedChatType } from '../schemas/joined-chats'
 import type { StorageMessageContextParams } from '../types/events'
 import type { CoreMessageMediaPhoto, CoreMessageMediaSticker } from '../types/media'
 import type { CoreMessage } from '../types/message'
@@ -43,15 +44,15 @@ async function upsertMessagesForAccount(
     .from(joinedChatsTable)
     .where(inArray(joinedChatsTable.chat_id, chatIds))
 
-  const chatTypeById = new Map<string, 'user' | 'group' | 'channel'>()
+  const chatTypeById = new Map<string, JoinedChatType>()
   for (const row of chatRows)
     chatTypeById.set(row.chat_id, row.chat_type)
 
   const dbMessages = messages.map((message) => {
-    const chatType = chatTypeById.get(message.chatId)
+    const chatType = chatTypeById.get(message.chatId)!
     // Only scope by account for private dialogs; keep group/channel messages shared.
     const ownerAccountId = chatType === 'user' ? accountId : null
-    return convertToDBInsertMessage(ownerAccountId, message)
+    return convertToDBInsertMessage(ownerAccountId, chatType, message)
   })
 
   if (dbMessages.length === 0)
