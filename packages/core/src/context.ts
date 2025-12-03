@@ -1,5 +1,6 @@
 import type { TelegramClient } from 'telegram'
 
+import type { AccountSettings } from './types/account-settings'
 import type {
   CoreEmitter,
   CoreEvent,
@@ -10,6 +11,7 @@ import type {
 import { useLogger } from '@guiiai/logg'
 import { EventEmitter } from 'eventemitter3'
 
+import { fetchSettingsByAccountId, updateAccountSettings } from './models/account-settings'
 import { detectMemoryLeak } from './utils/memory-leak-detector'
 
 export type { CoreEmitter, CoreEvent, CoreEventData, FromCoreEvent, ToCoreEvent } from './types/events'
@@ -120,6 +122,14 @@ export function createCoreContext() {
     return currentAccountId
   }
 
+  async function getAccountSettings(): Promise<AccountSettings> {
+    return (await fetchSettingsByAccountId(getCurrentAccountId())).expect('Failed to fetch account settings')
+  }
+
+  async function setAccountSettings(newSettings: AccountSettings) {
+    return (await updateAccountSettings(getCurrentAccountId(), newSettings)).expect('Failed to update account settings')
+  }
+
   // Setup memory leak detection and get cleanup function
   const cleanupMemoryLeakDetector = detectMemoryLeak(emitter)
 
@@ -166,6 +176,8 @@ export function createCoreContext() {
     getCurrentAccountId,
     withError,
     cleanup,
+    getAccountSettings,
+    setAccountSettings,
   }
 }
 

@@ -170,17 +170,19 @@ export function registerStorageEventHandlers(ctx: CoreContext) {
       timeRange: params.timeRange,
     }
 
+    const embeddingSettings = (await ctx.getAccountSettings()).embedding
+    const embeddingDimension = embeddingSettings.dimension
     let dbMessages: DBRetrievalMessages[] = []
     if (params.useVector) {
       let embedding: number[] = []
-      const embeddingResult = (await embedContents([params.content])).orUndefined()
+      const embeddingResult = (await embedContents([params.content], embeddingSettings)).orUndefined()
       if (embeddingResult)
         embedding = embeddingResult.embeddings[0]
 
-      dbMessages = (await retrieveMessages(accountId, params.chatId, { embedding, text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
+      dbMessages = (await retrieveMessages(accountId, params.chatId, embeddingDimension, { embedding, text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
     }
     else {
-      dbMessages = (await retrieveMessages(accountId, params.chatId, { text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
+      dbMessages = (await retrieveMessages(accountId, params.chatId, embeddingDimension, { text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
     }
 
     logger.withFields({ messages: dbMessages.length }).verbose('Retrieved messages')

@@ -4,6 +4,7 @@ import type { CorePagination } from '@tg-search/common'
 
 import type { CoreDB, CoreTransaction } from '../db'
 import type { JoinedChatType } from '../schemas/joined-chats'
+import type { EmbeddingDimension } from '../types/account-settings'
 import type { StorageMessageContextParams } from '../types/events'
 import type { CoreMessageMediaPhoto, CoreMessageMediaSticker } from '../types/media'
 import type { CoreMessage } from '../types/message'
@@ -298,6 +299,7 @@ export async function fetchMessageContextWithPhotos(
 export async function retrieveMessages(
   accountId: string,
   chatId: string | undefined,
+  embeddingDimension: EmbeddingDimension,
   content: {
     text?: string
     embedding?: number[]
@@ -319,7 +321,7 @@ export async function retrieveMessages(
   }
 
   if (content.embedding && content.embedding.length !== 0) {
-    const relevantMessages = await retrieveVector(accountId, chatId, content.embedding, pagination, filters)
+    const relevantMessages = await retrieveVector(accountId, chatId, content.embedding, embeddingDimension, pagination, filters)
     logger.withFields({ relevantMessages: relevantMessages.length }).verbose('Retrieved vector messages')
     retrievalMessages.push(...relevantMessages)
   }

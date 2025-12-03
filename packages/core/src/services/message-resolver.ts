@@ -5,7 +5,6 @@ import type { MessageResolverRegistryFn } from '../message-resolvers'
 import type { SyncOptions } from '../types/events'
 
 import { useLogger } from '@guiiai/logg'
-import { useConfig } from '@tg-search/common'
 
 import { convertToCoreMessage } from '../utils/message'
 
@@ -39,7 +38,7 @@ export function createMessageResolverService(ctx: CoreContext) {
 
       // Avatar resolver is disabled by default (configured in generateDefaultConfig).
       // Current strategy: client-driven, on-demand avatar loading via entity:avatar:fetch.
-      const disabledResolvers = useConfig().resolvers?.disabledResolvers
+      const disabledResolvers = (await ctx.getAccountSettings()).resolvers?.disabledResolvers
 
       // Embedding or resolve messages
       const promises = Array.from(resolvers.registry.entries())

@@ -1,3 +1,4 @@
+export * from './useAccount'
 export * from './useAIChat'
 export * from './useAuth'
 export * from './useAvatar'
