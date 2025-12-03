@@ -114,14 +114,13 @@ docker run -d --name telegram-search \
 | `TELEGRAM_API_HASH` | Telegram アプリ Hash |
 | `DATABASE_TYPE` | `postgres` または `pglite`（デフォルト：`pglite`） |
 | `DATABASE_URL` | PostgreSQL 接続文字列（`DATABASE_TYPE=postgres` の場合のみ） |
-| `EMBEDDING_API_KEY` | OpenAI/Ollama の API キー |
-| `EMBEDDING_BASE_URL` | カスタム Embedding API ベース URL |
-| `EMBEDDING_PROVIDER` | `openai` または `ollama` |
-| `EMBEDDING_MODEL` | モデル名 |
-| `EMBEDDING_DIMENSION` | Embedding 次元（例：`1536`、`1024`、`768`） |
 | `PROXY_URL` | プロキシ URL（例：`socks5://user:pass@host:port`） |
 
-**PostgreSQL と Embeddings を使用する例：**
+> [!IMPORTANT]
+> AI Embedding & LLM 設定は現在アプリ内で**アカウントごとに設定**されています（設定 → API）。  
+> 環境変数 like `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, etc. は廃止され、将来のリリースで削除されます。
+
+**PostgreSQL を使用する例：**
 
 ```bash
 docker run -d --name telegram-search \

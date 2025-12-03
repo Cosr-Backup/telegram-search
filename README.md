@@ -114,14 +114,13 @@ Then open **http://localhost:3333** 🎉
 | `TELEGRAM_API_HASH` | Telegram app hash |
 | `DATABASE_TYPE` | `postgres` or `pglite` (default: `pglite`) |
 | `DATABASE_URL` | PostgreSQL connection string (only when `DATABASE_TYPE=postgres`) |
-| `EMBEDDING_API_KEY` | API key for OpenAI/Ollama |
-| `EMBEDDING_BASE_URL` | Custom embedding API base URL |
-| `EMBEDDING_PROVIDER` | `openai` or `ollama` |
-| `EMBEDDING_MODEL` | Model name |
-| `EMBEDDING_DIMENSION` | Embedding dimension (e.g. `1536`, `1024`, `768`) |
 | `PROXY_URL` | Proxy URL (e.g. `socks5://user:pass@host:port`) |
 
-**Example with PostgreSQL & embeddings:**
+> [!IMPORTANT]
+> AI Embedding & LLM settings are now configured **per account inside the app** (Settings → API).  
+> Environment variables like `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, etc. are deprecated and will be removed in a future release.
+
+**Example with PostgreSQL:**
 
 ```bash
 docker run -d --name telegram-search \
@@ -131,8 +130,6 @@ docker run -d --name telegram-search \
   -e TELEGRAM_API_HASH=d524b414d21f4d37f08684c1df41ac9c \
   -e DATABASE_TYPE=postgres \
   -e DATABASE_URL=postgresql://<postgres-host>:5432/postgres \
-  -e EMBEDDING_API_KEY=sk-xxxx \
-  -e EMBEDDING_BASE_URL=https://api.openai.com/v1 \
   ghcr.io/groupultra/telegram-search:latest
 ```
 

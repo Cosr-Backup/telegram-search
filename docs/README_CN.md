@@ -114,14 +114,13 @@ docker run -d --name telegram-search \
 | `TELEGRAM_API_HASH` | Telegram 应用 Hash |
 | `DATABASE_TYPE` | `postgres` 或 `pglite`（默认：`pglite`） |
 | `DATABASE_URL` | PostgreSQL 连接字符串（仅当 `DATABASE_TYPE=postgres` 时） |
-| `EMBEDDING_API_KEY` | OpenAI/Ollama 的 API 密钥 |
-| `EMBEDDING_BASE_URL` | 自定义 Embedding API 基础 URL |
-| `EMBEDDING_PROVIDER` | `openai` 或 `ollama` |
-| `EMBEDDING_MODEL` | 模型名称 |
-| `EMBEDDING_DIMENSION` | Embedding 维度（如 `1536`、`1024`、`768`） |
 | `PROXY_URL` | 代理 URL（如 `socks5://user:pass@host:port`） |
 
-**使用 PostgreSQL 和 Embeddings 的示例：**
+> [!IMPORTANT]
+> AI Embedding & LLM 设置现在在应用内**按账户**配置（设置 → API）。  
+> 环境变量如 `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, 等已废弃，将在未来版本中移除。
+
+**使用 PostgreSQL 的示例：**
 
 ```bash
 docker run -d --name telegram-search \
@@ -131,8 +130,6 @@ docker run -d --name telegram-search \
   -e TELEGRAM_API_HASH=d524b414d21f4d37f08684c1df41ac9c \
   -e DATABASE_TYPE=postgres \
   -e DATABASE_URL=postgresql://<postgres-host>:5432/postgres \
-  -e EMBEDDING_API_KEY=sk-xxxx \
-  -e EMBEDDING_BASE_URL=https://api.openai.com/v1 \
   ghcr.io/groupultra/telegram-search:latest
 ```
 
