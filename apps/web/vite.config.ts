@@ -47,6 +47,11 @@ export default defineConfig({
             propsDestructure: true,
             defineModel: true,
           },
+          template: {
+            compilerOptions: {
+              isCustomElement: tag => tag.startsWith('pglite-'),
+            },
+          },
         }),
       },
     }),

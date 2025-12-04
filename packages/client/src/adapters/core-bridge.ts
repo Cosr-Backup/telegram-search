@@ -13,11 +13,20 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
 import { computed, ref, watch } from 'vue'
 
+import { useSetupPGliteDevtools } from '../devtools/pglite-devtools'
 import { getRegisterEventHandler } from '../event-handlers'
 import { registerAllEventHandlers } from '../event-handlers/register'
 import { drainEventQueue, enqueueEventHandler } from '../utils/event-queue'
 import { createSessionStore } from '../utils/session-store'
 import { createCoreRuntime } from './core-runtime'
+
+// Dev-only PGlite handle for browser-only mode debugging.
+// Typed as any to avoid introducing a hard dependency from client to PGlite.
+let pgliteDevDb: any
+
+export function usePGliteDevDb(): any {
+  return pgliteDevDb
+}
 
 export const useCoreBridgeStore = defineStore('core-bridge', () => {
   const storageSessions = useLocalStorage<StoredSession[]>('core-bridge/sessions', [])
@@ -157,10 +166,18 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
 
     logger.withFields({ config: config.value }).verbose('Initialized config')
 
-    await initDrizzle(logger, config.value, {
+    const { pglite } = await initDrizzle(logger, config.value, {
       debuggerWebSocketUrl: import.meta.env.VITE_DB_DEBUGGER_WS_URL as string,
       isDatabaseDebugMode: import.meta.env.VITE_DB_DEBUG === 'true',
     })
+    pgliteDevDb = pglite
+
+    // Wire up Vue DevTools plugin if the shell has registered a setup
+    // callback via provide/inject (dev-only).
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
+      const setupDevtools = useSetupPGliteDevtools()
+      setupDevtools?.(pgliteDevDb)
+    }
 
     ensureSessionInvariants()
 

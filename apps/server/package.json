@@ -24,7 +24,7 @@
   "devDependencies": {
     "@proj-airi/unplugin-drizzle-orm-migrations": "catalog:",
     "pathe": "^2.0.3",
-    "tsdown": "^0.16.4",
+    "tsdown": "catalog:",
     "vite-node": "^5.2.0"
   }
 }

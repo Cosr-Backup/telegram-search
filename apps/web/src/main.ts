@@ -13,6 +13,7 @@ import App from './App.vue'
 
 import { LOG_LEVEL } from './constants'
 import { i18n } from './modules/i18n'
+import { createPGliteDevtoolsPlugin } from './plugins/pglite-devtools'
 
 import '@unocss/reset/tailwind.css'
 import 'nprogress/nprogress.css'
@@ -58,4 +59,6 @@ app.use(router)
 app.use(VueQueryPlugin)
 app.use(pinia)
 app.use(autoAnimatePlugin)
+app.use(createPGliteDevtoolsPlugin())
+
 app.mount('#app')
