@@ -12,7 +12,7 @@ export interface RuntimeFlags {
 }
 
 const DEFAULT_FLAGS: RuntimeFlags = {
-  logLevel: LoggerLevel.Verbose,
+  logLevel: LoggerLevel.Log,
   logFormat: LoggerFormat.Pretty,
 
   isDebugMode: false,
