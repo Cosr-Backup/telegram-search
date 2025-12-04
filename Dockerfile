@@ -16,6 +16,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json ./packages/core/package.json
 COPY packages/common/package.json ./packages/common/package.json
 COPY packages/client/package.json ./packages/client/package.json
+COPY packages/pglite-inspector/package.json ./packages/pglite-inspector/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/server/package.json ./apps/server/package.json
 
@@ -63,6 +64,7 @@ COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
 COPY --from=builder /app/packages/common/package.json ./packages/common/package.json
 COPY --from=builder /app/packages/client/package.json ./packages/client/package.json
+COPY --from=builder /app/packages/pglite-inspector/dist ./packages/pglite-inspector/dist
 COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
 
@@ -73,6 +75,7 @@ RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
 COPY --from=builder /app/packages/common/src ./packages/common/src
 COPY --from=builder /app/packages/client/src ./packages/client/src
+COPY --from=builder /app/packages/pglite-inspector/dist ./packages/pglite-inspector/dist
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 
 # Copy nginx config and frontend
@@ -91,8 +94,6 @@ ENV DATABASE_TYPE="pglite"
 ENV DATABASE_URL=""
 ENV TELEGRAM_API_ID="611335"
 ENV TELEGRAM_API_HASH="d524b414d21f4d37f08684c1df41ac9c"
-ENV EMBEDDING_API_KEY=""
-ENV EMBEDDING_BASE_URL="https://api.openai.com/v1"
 ENV PROXY_URL=""
 
 # Declare volumes for data persistence

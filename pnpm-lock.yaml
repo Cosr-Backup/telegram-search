@@ -18,9 +18,6 @@ catalogs:
     '@unbird/result':
       specifier: ^1.1.1
       version: 1.1.1
-    '@xsai-ext/providers-local':
-      specifier: ^0.4.0-beta.9
-      version: 0.4.0-beta.9
     '@xsai/embed':
       specifier: ^0.4.0-beta.9
       version: 0.4.0-beta.9
@@ -28,7 +25,7 @@ catalogs:
       specifier: ^0.4.0-beta.9
       version: 0.4.0-beta.9
     tsdown:
-      specifier: ^0.16.0
+      specifier: ^0.16.4
       version: 0.16.4
     vue-sonner:
       specifier: ^2.0.9
@@ -378,9 +375,6 @@ importers:
       '@unbird/result':
         specifier: 'catalog:'
         version: 1.1.1
-      '@xsai-ext/providers-local':
-        specifier: 'catalog:'
-        version: 0.4.0-beta.9
       '@xsai/embed':
         specifier: 'catalog:'
         version: 0.4.0-beta.9
@@ -390,9 +384,6 @@ importers:
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
-      defu:
-        specifier: ^6.1.4
-        version: 6.1.4
       drizzle-orm:
         specifier: ^0.44.7
         version: 0.44.7(@electric-sql/pglite@0.3.14)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(postgres@3.4.7)
@@ -428,7 +419,7 @@ importers:
         specifier: ^8.15.6
         version: 8.15.6
       tsdown:
-        specifier: ^0.16.4
+        specifier: 'catalog:'
         version: 0.16.4(ms@2.1.3)(synckit@0.11.11)(typescript@5.9.3)(unplugin-unused@0.5.6)(vue-tsc@3.1.3(typescript@5.9.3))
 
   packages/pglite-inspector:
@@ -439,12 +430,13 @@ importers:
       '@vue/devtools-kit':
         specifier: ^8.0.3
         version: 8.0.3
-      tsdown:
-        specifier: 'catalog:'
-        version: 0.16.4(ms@2.1.3)(synckit@0.11.11)(typescript@5.9.3)(unplugin-unused@0.5.6)(vue-tsc@3.1.3(typescript@5.9.3))
       vue:
         specifier: ^3.5.0
         version: 3.5.24(typescript@5.9.3)
+    devDependencies:
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.16.4(ms@2.1.3)(synckit@0.11.11)(typescript@5.9.3)(unplugin-unused@0.5.6)(vue-tsc@3.1.3(typescript@5.9.3))
 
 packages:
 
@@ -2939,12 +2931,6 @@ packages:
     resolution: {integrity: sha512-mTCA0uczBgurRlwVaQHfG0Ja7UdGe4g9mwffiJmvLiTtp1G4AQyIjej6si/k8c8pUwTfVpNufck+23gXptPAkw==}
     peerDependencies:
       vue: ^3.5.0
-
-  '@xsai-ext/providers-local@0.4.0-beta.9':
-    resolution: {integrity: sha512-rbdAdY/Q81GySXyHzJW78H5xJCNY+G4Y7KWjsliBXMwJgynO1q8MY+LVksqhknBlaDil/ySqN+ibaBbERxfgTA==}
-
-  '@xsai-ext/shared-providers@0.4.0-beta.9':
-    resolution: {integrity: sha512-HCDZV9LFHpgoMiqGfyMIwDq6UOhC6B8fj1Skz1q6X8gMyUQhLbbY9cOf1ieWn4FFW2SXJvGKEsyIlL1CAdPigA==}
 
   '@xsai/embed@0.4.0-beta.9':
     resolution: {integrity: sha512-Jgdif7M4xRVIAixd1XGbU6Ocaxm+DVDPrJG0ov79na973V3tqXbV49BlYqvmRaWoIrtMCCzfTxrJD342IKqEFA==}
@@ -9049,15 +9035,6 @@ snapshots:
   '@vueuse/shared@14.0.0(vue@3.5.24(typescript@5.9.3))':
     dependencies:
       vue: 3.5.24(typescript@5.9.3)
-
-  '@xsai-ext/providers-local@0.4.0-beta.9':
-    dependencies:
-      '@xsai-ext/shared-providers': 0.4.0-beta.9
-      '@xsai/shared': 0.4.0-beta.9
-
-  '@xsai-ext/shared-providers@0.4.0-beta.9':
-    dependencies:
-      '@xsai/shared': 0.4.0-beta.9
 
   '@xsai/embed@0.4.0-beta.9':
     dependencies:

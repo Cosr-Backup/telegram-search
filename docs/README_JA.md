@@ -130,8 +130,6 @@ docker run -d --name telegram-search \
   -e TELEGRAM_API_HASH=d524b414d21f4d37f08684c1df41ac9c \
   -e DATABASE_TYPE=postgres \
   -e DATABASE_URL=postgresql://<postgres-host>:5432/postgres \
-  -e EMBEDDING_API_KEY=sk-xxxx \
-  -e EMBEDDING_BASE_URL=https://api.openai.com/v1 \
   ghcr.io/groupultra/telegram-search:latest
 ```
 
