@@ -126,7 +126,6 @@ export default defineConfig({
     ],
     include: [
       'virtua/vue',
-      'workbox-window',
       'date-fns',
       'echarts/charts',
       'echarts/components',
