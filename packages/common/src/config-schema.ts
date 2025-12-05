@@ -13,16 +13,41 @@ export enum DatabaseType {
 }
 
 export const proxyConfigSchema = object({
-  ip: optional(string(), ''),
-  port: optional(number(), 0),
   MTProxy: optional(boolean()),
-  secret: optional(string()),
-  socksType: optional(enumType(SocksType)),
-  timeout: optional(number()),
-  username: optional(string()),
-  password: optional(string()),
-  // ProxyUrl for convenient configuration, takes precedence over individual fields
+
+  /**
+   * Proxy URL for convenient configuration, takes precedence over individual fields
+   */
   proxyUrl: optional(string()),
+
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  ip: optional(string(), ''),
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  port: optional(number(), 0),
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  secret: optional(string()),
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  socksType: optional(enumType(SocksType)),
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  timeout: optional(number()),
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  username: optional(string()),
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  password: optional(string()),
 })
 
 export const databaseConfigSchema = object({

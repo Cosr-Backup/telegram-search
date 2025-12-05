@@ -37,6 +37,16 @@ export function readIntegerEnv(key: string, env: Environment): number | undefine
   return undefined
 }
 
+export function readStringEnv(keys: string[], env: Environment): string | undefined {
+  for (const key of keys) {
+    const value = readEnvValue(key, env)
+    if (value) {
+      return value
+    }
+  }
+  return undefined
+}
+
 export function parseEnvToConfig(env: Environment): Config {
   const partialConfig = {
     database: {
@@ -45,35 +55,23 @@ export function parseEnvToConfig(env: Environment): Config {
     },
     api: {
       telegram: {
-        apiId: readEnvValue('TELEGRAM_API_ID', env),
-        apiHash: readEnvValue('TELEGRAM_API_HASH', env),
-        receiveMessage: readBooleanEnv('TELEGRAM_RECEIVE_MESSAGE', env),
+        apiId: readStringEnv(['TELEGRAM_API_ID', 'TELEGRAM_APP_ID', 'VITE_TELEGRAM_API_ID', 'VITE_TELEGRAM_APP_ID'], env),
+        apiHash: readStringEnv(['TELEGRAM_API_HASH', 'TELEGRAM_APP_HASH', 'VITE_TELEGRAM_API_HASH', 'VITE_TELEGRAM_APP_HASH'], env),
         proxy: {
-          proxyUrl: readEnvValue('PROXY_URL', env),
-          ip: readEnvValue('PROXY_IP', env),
-          port: readIntegerEnv('PROXY_PORT', env),
           MTProxy: readBooleanEnv('PROXY_MT_PROXY', env),
-          secret: readEnvValue('PROXY_SECRET', env),
-          socksType: readIntegerEnv('PROXY_SOCKS_TYPE', env),
-          timeout: readIntegerEnv('PROXY_TIMEOUT', env),
-          username: readEnvValue('PROXY_USERNAME', env),
-          password: readEnvValue('PROXY_PASSWORD', env),
+          proxyUrl: readEnvValue('PROXY_URL', env),
         },
       },
-      embedding: {
-        provider: readEnvValue('EMBEDDING_PROVIDER', env),
-        model: readEnvValue('EMBEDDING_MODEL', env),
-        apiKey: readEnvValue('EMBEDDING_API_KEY', env),
-        apiBase: readEnvValue('EMBEDDING_API_BASE', env),
-        dimension: readIntegerEnv('EMBEDDING_DIMENSION', env),
-      },
     },
-  } as Partial<Config>
+  }
 
   const parsedConfig = safeParse(configSchema, partialConfig)
   if (!parsedConfig.success) {
     throw new Error('Failed to parse config', { cause: parsedConfig.issues })
   }
+
+  // eslint-disable-next-line no-console
+  console.log('Config parsed', parsedConfig.output)
 
   return parsedConfig.output
 }
