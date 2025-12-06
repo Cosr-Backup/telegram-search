@@ -1,8 +1,7 @@
 # ---------------------------------
 # --------- Builder Stage ---------
 # ---------------------------------
-FROM node:24.11.1-alpine AS builder
-
+FROM node:24-bookworm-slim AS builder
 WORKDIR /app
 
 # Enable pnpm
@@ -10,7 +9,8 @@ RUN corepack enable pnpm && \
     corepack prepare pnpm@10.22.0 --activate
 
 # Install build tools (git needed for vite plugins)
-RUN apk add --no-cache git
+RUN apt-get update && apt-get install -y git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency manifests first (for layer caching)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -36,7 +36,7 @@ RUN pnpm run server:build
 # ---------------------------------
 # --------- Nginx Stage -----------
 # ---------------------------------
-FROM nginx:alpine AS web
+FROM nginx:1.27-bookworm AS web
 
 # Copy built frontend
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
@@ -49,7 +49,7 @@ EXPOSE 3333
 # ---------------------------------
 # --------- Runtime Stage ---------
 # ---------------------------------
-FROM node:24.11.1-alpine
+FROM node:24-bookworm-slim
 
 WORKDIR /app
 
@@ -59,7 +59,8 @@ RUN corepack enable pnpm && \
 
 # Install nginx and curl for serving frontend and healthcheck
 # gettext provides envsubst for templating nginx config with env vars
-RUN apk add --no-cache nginx curl ca-certificates gettext
+RUN apt-get update && apt-get install -y nginx curl ca-certificates gettext \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy server dist from builder
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
