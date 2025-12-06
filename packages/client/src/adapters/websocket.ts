@@ -45,7 +45,7 @@ export const useWebsocketStore = defineStore('websocket', () => {
   const activeSessionId = computed(() => {
     const slot = storageActiveSessionSlot.value
     const session = storageSessions.value[slot]
-    return session?.uuid ?? ''
+    return session?.uuid || uuidv4()
   })
 
   /**
