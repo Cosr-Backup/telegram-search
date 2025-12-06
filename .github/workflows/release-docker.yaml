@@ -12,7 +12,7 @@ on:
 
 jobs:
   ghcr_build:
-    name: Release Docker / OCI
+    name: Release
     runs-on: ubuntu-latest
 
     steps:
