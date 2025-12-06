@@ -5,14 +5,14 @@ permissions:
   packages: write
 
 on:
-  push:
-    tags:
-      - '**'
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   ghcr_build:
-    name: Release
+    name: Release Docker / OCI
     runs-on: ubuntu-latest
 
     steps:
@@ -51,18 +51,28 @@ jobs:
       - name: Create image tags
         id: image_tag
         run: |
-          IMAGE_VERSION="${{ steps.version.outputs.version }}"
           IMAGE_REPO="ghcr.io/${{ github.repository }}"
-          if [[ "$IMAGE_VERSION" == *beta* ]]; then
+
+          # Nightly build: push to main
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
             echo "tags<<EOF" >> $GITHUB_OUTPUT
-            echo "$IMAGE_REPO:$IMAGE_VERSION" >> $GITHUB_OUTPUT
-            echo "$IMAGE_REPO:beta" >> $GITHUB_OUTPUT
+            echo "$IMAGE_REPO:nightly" >> $GITHUB_OUTPUT
+            echo "$IMAGE_REPO:nightly-$SHORT_SHA" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
-            echo "tags<<EOF" >> $GITHUB_OUTPUT
-            echo "$IMAGE_REPO:$IMAGE_VERSION" >> $GITHUB_OUTPUT
-            echo "$IMAGE_REPO:latest" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            IMAGE_VERSION="${{ steps.version.outputs.version }}"
+            if [[ "$IMAGE_VERSION" == *beta* ]]; then
+              echo "tags<<EOF" >> $GITHUB_OUTPUT
+              echo "$IMAGE_REPO:$IMAGE_VERSION" >> $GITHUB_OUTPUT
+              echo "$IMAGE_REPO:beta" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "tags<<EOF" >> $GITHUB_OUTPUT
+              echo "$IMAGE_REPO:$IMAGE_VERSION" >> $GITHUB_OUTPUT
+              echo "$IMAGE_REPO:latest" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Build and Push
