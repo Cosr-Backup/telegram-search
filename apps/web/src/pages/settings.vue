@@ -48,13 +48,21 @@ function toggleMessageResolver(resolverKey: string, enabled: boolean) {
   }
 }
 
-async function updateConfig() {
+function updateConfig() {
   if (!accountSettings.value)
     return
 
   useBridgeStore().sendEvent('config:update', { accountSettings: accountSettings.value })
+  const toastId = toast.loading(t('settings.savingSettings'))
 
-  toast.success(t('settings.settingsSavedSuccessfully'))
+  Promise.race([
+    useBridgeStore().waitForEvent('config:data'),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000)),
+  ])
+    .then(() => toast.success(t('settings.settingsSavedSuccessfully'), { id: toastId }))
+    .catch((error) => {
+      toast.error(error.message, { id: toastId })
+    })
 }
 
 onMounted(() => {
