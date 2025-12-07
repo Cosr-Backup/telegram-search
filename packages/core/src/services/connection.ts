@@ -5,7 +5,7 @@ import type { ProxyInterface } from 'telegram/network/connection/TCPMTProxy'
 import type { CoreContext } from '../context'
 
 import { useLogger } from '@guiiai/logg'
-import { isBrowser } from '@tg-search/common'
+import { isBrowser, parseProxyUrl } from '@tg-search/common'
 import { Err, Ok } from '@unbird/result'
 import { Api, TelegramClient } from 'telegram'
 import { StringSession } from 'telegram/sessions'
@@ -24,32 +24,37 @@ export function createConnectionService(ctx: CoreContext) {
   }) {
     const logger = useLogger()
 
-    // FIXME: extract proxy interface to a separate service
     const getProxyInterface = (proxyConfig: ProxyConfig | undefined): ProxyInterface | undefined => {
-      // Check if we have a valid proxy configuration
-      if (!proxyConfig || !proxyConfig.ip || !proxyConfig.port) {
+      if (!proxyConfig || !proxyConfig.proxyUrl) {
         return undefined
       }
 
-      if (proxyConfig.MTProxy && proxyConfig.secret) {
+      const parsedProxy = parseProxyUrl(proxyConfig.proxyUrl)
+
+      // Check if we have a valid proxy configuration
+      if (!parsedProxy?.ip || !parsedProxy?.port) {
+        return undefined
+      }
+
+      if (parsedProxy.MTProxy && parsedProxy.secret) {
         // MTProxy configuration
         return {
-          ip: proxyConfig.ip,
-          port: proxyConfig.port,
+          ip: parsedProxy.ip,
+          port: parsedProxy.port,
           MTProxy: true,
-          secret: proxyConfig.secret,
-          timeout: proxyConfig.timeout || 15, // Default timeout of 15 seconds
+          secret: parsedProxy.secret,
+          timeout: parsedProxy.timeout || 15, // Default timeout of 15 seconds
         }
       }
 
       // SOCKS proxy configuration
       return {
-        ip: proxyConfig.ip,
-        port: proxyConfig.port,
-        socksType: proxyConfig.socksType || 5, // Default to SOCKS5
-        timeout: proxyConfig.timeout || 15, // Default timeout of 15 seconds
-        username: proxyConfig.username,
-        password: proxyConfig.password,
+        ip: parsedProxy.ip,
+        port: parsedProxy.port,
+        socksType: parsedProxy.socksType || 5, // Default to SOCKS5
+        timeout: parsedProxy.timeout || 15, // Default timeout of 15 seconds
+        username: parsedProxy.username,
+        password: parsedProxy.password,
       }
     }
 

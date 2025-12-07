@@ -13,13 +13,15 @@ export enum DatabaseType {
 }
 
 export const proxyConfigSchema = object({
-  MTProxy: optional(boolean()),
-
   /**
    * Proxy URL for convenient configuration, takes precedence over individual fields
    */
   proxyUrl: optional(string()),
 
+  /**
+   * @deprecated Use proxyUrl instead
+   */
+  MTProxy: optional(boolean()),
   /**
    * @deprecated Use proxyUrl instead
    */
