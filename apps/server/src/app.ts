@@ -2,6 +2,8 @@ import type { Config, RuntimeFlags } from '@tg-search/common'
 
 import process from 'node:process'
 
+import figlet from 'figlet'
+
 import { initLogger, useLogger } from '@guiiai/logg'
 import { parseEnvFlags, parseEnvToConfig } from '@tg-search/common'
 import { initDrizzle } from '@tg-search/core'
@@ -26,8 +28,8 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
   const app = new H3({
     debug: flags.isDebugMode,
     onRequest(event) {
-      const path = event.path
-      const method = event.method
+      const path = event.url.pathname
+      const method = event.req.method
 
       logger.withFields({
         method,
@@ -35,8 +37,8 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
       }).debug('Request started')
     },
     onError(error, event) {
-      const path = event.path
-      const method = event.method
+      const path = event.url.pathname
+      const method = event.req.method
 
       const status = error instanceof Error && 'statusCode' in error
         ? (error as { statusCode: number }).statusCode
@@ -79,7 +81,16 @@ async function bootstrap() {
   initLogger(flags.logLevel, flags.logFormat)
   const logger = useLogger().useGlobalConfig()
 
-  logger.log(`Telegram Search v${pkg.version}`)
+  figlet.text('Telegram Search', {
+    // font: 'Ghost',
+    // horizontalLayout: 'default',
+    // verticalLayout: 'default',
+    // width: 80,
+    // whitespaceBreak: true,
+  }, (_, result) => {
+    // eslint-disable-next-line no-console
+    console.log(`\n${result}\nv${pkg.version}\n`)
+  })
 
   const config = parseEnvToConfig(process.env)
 
