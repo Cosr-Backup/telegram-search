@@ -187,7 +187,7 @@ export const useCoreBridgeStore = defineStore('core-bridge', () => {
 
     // Emit an initial server:connected event so the UI knows core-bridge
     // mode is available, mirroring websocket adapter behavior.
-    sendWsEvent({ type: 'server:connected', data: { sessionId: activeSessionId.value, connected: false } })
+    sendWsEvent({ type: 'server:connected', data: { sessionId: activeSessionId.value, accountReady: false } })
 
     isInitialized.value = true
   }

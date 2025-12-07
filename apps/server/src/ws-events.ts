@@ -4,7 +4,7 @@ import type { Peer } from 'crossws'
 import { useLogger } from '@guiiai/logg'
 
 export interface WsEventFromServer {
-  'server:connected': (data: { sessionId: string, connected: boolean }) => void
+  'server:connected': (data: { sessionId: string, accountReady: boolean }) => void
 }
 
 export interface WsEventFromClient {

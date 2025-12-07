@@ -1,39 +1,32 @@
 import { useLogger } from '@guiiai/logg'
 import { generateDefaultAccountSettings } from '@tg-search/core'
-import { defineStore, storeToRefs } from 'pinia'
-import { ref, watch } from 'vue'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 import { useBridgeStore } from '../composables/useBridge'
 
 export const useAccountStore = defineStore('account', () => {
   const accountSettings = ref(generateDefaultAccountSettings())
-  const { activeSessionId } = storeToRefs(useBridgeStore())
+  const bridgeStore = useBridgeStore()
 
   const isReady = ref(false)
 
   function markReady() {
+    if (isReady.value)
+      return
+
     isReady.value = true
+
+    useLogger('AccountStore').verbose('Fetching config for new session')
+    bridgeStore.sendEvent('config:fetch')
   }
 
   function resetReady() {
     isReady.value = false
   }
 
-  function init() {
-    if (isReady.value) {
-      useBridgeStore().sendEvent('config:fetch')
-    }
-  }
-
-  watch(activeSessionId, () => {
-    if (isReady.value) {
-      useLogger('AccountStore').log('Fetching config for new session')
-      useBridgeStore().sendEvent('config:fetch')
-    }
-  })
-
   return {
-    init,
+    isReady: computed(() => isReady.value),
     markReady,
     resetReady,
     accountSettings,

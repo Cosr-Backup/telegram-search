@@ -1,8 +1,13 @@
 import type { CoreUserEntity } from '@tg-search/core'
 
 export interface SessionContext {
+  /**
+   * @deprecated Use account store's isReady instead
+   */
   isConnected?: boolean
+
   me?: CoreUserEntity
+
   /**
    * Telegram StringSession managed on the client side.
    * Core never persists this; it only forwards updated values.

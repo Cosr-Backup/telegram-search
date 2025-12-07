@@ -78,12 +78,24 @@ import { sendWsEvent } from './ws-events'
  */
 export interface AccountState {
   ctx: CoreContext
-  isConnected: boolean
-  // Core event listeners (registered once, shared by all WebSocket connections)
+
+  /**
+   * Whether the account is ready to be used
+   */
+  accountReady: boolean
+
+  /**
+   * Core event listeners (registered once, shared by all WebSocket connections)
+   */
   coreEventListeners: Map<keyof FromCoreEvent, (data: any) => void>
-  // Active WebSocket peers for this account
+
+  /**
+   * Active WebSocket peers for this account
+   */
   activePeers: Set<string>
+
   createdAt: number
+
   lastActive: number
 }
 
@@ -138,7 +150,7 @@ export function setupWsRoutes(app: H3, config: Config) {
       const ctx = createCoreInstance(config)
       const account: AccountState = {
         ctx,
-        isConnected: false,
+        accountReady: false,
         coreEventListeners: new Map(),
         activePeers: new Set(),
         createdAt: Date.now(),
@@ -183,7 +195,7 @@ export function setupWsRoutes(app: H3, config: Config) {
 
       logger.withFields({ accountId, activePeers: account.activePeers.size }).log('Peer added to account')
 
-      sendWsEvent(peer, 'server:connected', { sessionId: accountId, connected: account.isConnected })
+      sendWsEvent(peer, 'server:connected', { sessionId: accountId, accountReady: account.accountReady })
     },
 
     async message(peer, message) {
@@ -264,12 +276,12 @@ export function setupWsRoutes(app: H3, config: Config) {
         // Update account state based on events
         switch (event.type) {
           case 'auth:login':
-            account.ctx.emitter.once('auth:connected', () => {
-              account.isConnected = true
+            account.ctx.emitter.once('account:ready', () => {
+              account.accountReady = true
             })
             break
           case 'auth:logout':
-            account.isConnected = false
+            account.accountReady = false
 
             /**
              * Explicit logout: The ONLY time we destroy an account

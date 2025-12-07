@@ -64,10 +64,6 @@ function updateConfig() {
       toast.error(error.message, { id: toastId })
     })
 }
-
-onMounted(() => {
-  useBridgeStore().sendEvent('config:fetch')
-})
 </script>
 
 <template>
