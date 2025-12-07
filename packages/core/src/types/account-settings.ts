@@ -1,6 +1,6 @@
 import type { InferOutput } from 'valibot'
 
-import { array, enum as enumType, number, object, optional, string } from 'valibot'
+import { array, boolean, enum as enumType, number, object, optional, string } from 'valibot'
 
 export enum EmbeddingDimension {
   DIMENSION_1536 = 1536,
@@ -16,7 +16,6 @@ export const embeddingConfigSchema = object({
 })
 
 export const llmConfigSchema = object({
-  provider: optional(string(), 'openai'),
   model: optional(string(), 'gpt-4o-mini'),
   apiKey: optional(string(), ''),
   apiBase: optional(string(), 'https://api.openai.com/v1'),
@@ -29,10 +28,15 @@ export const resolversConfigSchema = object({
   disabledResolvers: optional(array(string()), ['avatar']),
 })
 
+export const receiveMessagesConfigSchema = object({
+  receiveAll: optional(boolean(), true),
+})
+
 export const accountSettingsSchema = object({
   embedding: optional(embeddingConfigSchema, {}),
   llm: optional(llmConfigSchema, {}),
   resolvers: optional(resolversConfigSchema, {}),
+  receiveMessages: optional(receiveMessagesConfigSchema, {}),
 })
 
 export type EmbeddingConfig = InferOutput<typeof embeddingConfigSchema>

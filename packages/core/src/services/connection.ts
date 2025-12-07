@@ -24,6 +24,7 @@ export function createConnectionService(ctx: CoreContext) {
   }) {
     const logger = useLogger()
 
+    // FIXME: extract proxy interface to a separate service
     const getProxyInterface = (proxyConfig: ProxyConfig | undefined): ProxyInterface | undefined => {
       // Check if we have a valid proxy configuration
       if (!proxyConfig || !proxyConfig.ip || !proxyConfig.port) {

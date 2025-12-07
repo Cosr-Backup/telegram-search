@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { useAccountStore, useBridgeStore } from '@tg-search/client'
+import { useAccountStore, useAuthStore, useBridgeStore } from '@tg-search/client'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 import { Button } from '../components/ui/Button'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const { accountSettings } = storeToRefs(useAccountStore())
+
+const sessionStore = useAuthStore()
+const { isLoggedIn } = storeToRefs(sessionStore)
 
 // Message resolvers configuration
 const messageResolvers = [
@@ -81,7 +86,40 @@ function updateConfig() {
     </div>
   </header>
 
-  <div class="container mx-auto p-6 space-y-6">
+  <!-- Login prompt banner -->
+  <div
+    v-if="!isLoggedIn"
+    class="flex items-center justify-center px-6 py-8"
+  >
+    <div
+      class="max-w-2xl w-full border border-primary/20 rounded-2xl bg-primary/5 p-6 transition-all"
+    >
+      <div class="flex flex-col items-center justify-center gap-4 md:flex-row md:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 flex shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <div class="i-lucide-lock-keyhole h-6 w-6 text-primary" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-foreground font-semibold">{{ t('loginPromptBanner.pleaseLoginToUseFullFeatures') }}</span>
+            <span class="text-xs text-muted-foreground">{{ t('loginPromptBanner.subtitle') }}</span>
+          </div>
+        </div>
+        <Button
+          size="md"
+          icon="i-lucide-log-in"
+          class="shrink-0"
+          @click="router.push({ path: '/login', query: { redirect: '/settings' } })"
+        >
+          {{ t('loginPromptBanner.login') }}
+        </Button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-else
+    class="container mx-auto p-6 space-y-6"
+  >
     <!-- Settings form -->
     <div class="space-y-6">
       <!-- API settings -->
@@ -195,6 +233,34 @@ function updateConfig() {
                   >
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Receive messages settings -->
+      <div class="border rounded-lg bg-card p-6 shadow-sm">
+        <h2 class="mb-4 text-xl font-semibold">
+          {{ t('settings.receiveMessagesSettings') }}
+        </h2>
+        <div class="space-y-4">
+          <p class="text-sm text-muted-foreground">
+            {{ t('settings.receiveMessagesDescription') }}
+          </p>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="flex items-center justify-between">
+              <label class="text-sm text-muted-foreground font-medium">
+                {{ t('settings.receiveAll') }}
+              </label>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input
+                  :checked="accountSettings.receiveMessages.receiveAll"
+                  type="checkbox"
+                  class="peer sr-only"
+                  @change="accountSettings.receiveMessages.receiveAll = ($event.target as HTMLInputElement).checked"
+                >
+                <div class="peer h-6 w-11 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:rounded-full after:bg-background peer-checked:bg-primary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring after:transition-all after:content-[''] peer-checked:after:translate-x-full" />
+              </label>
             </div>
           </div>
         </div>

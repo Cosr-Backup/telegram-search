@@ -4,6 +4,7 @@ import { safeParse } from 'valibot'
 
 import { accountSettingsSchema } from '../types/account-settings'
 
+// TODO: move to a more appropriate place
 export function generateDefaultAccountSettings(): AccountSettings {
   const defaultSettings = safeParse(accountSettingsSchema, {})
 

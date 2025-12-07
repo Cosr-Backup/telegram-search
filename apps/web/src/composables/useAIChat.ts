@@ -10,7 +10,6 @@ import * as v from 'valibot'
 const logger = useLogger('composables:ai-chat')
 
 interface LLMConfig {
-  provider: string
   model: string
   apiKey: string
   apiBase: string
