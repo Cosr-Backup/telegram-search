@@ -1,3 +1,5 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { Config } from './config-schema'
 
 import { defu } from 'defu'
@@ -47,7 +49,7 @@ export function readStringEnv(keys: string[], env: Environment): string | undefi
   return undefined
 }
 
-export function parseEnvToConfig(env: Environment): Config {
+export function parseEnvToConfig(env: Environment, logger?: Logger): Config {
   const partialConfig = {
     database: {
       url: readEnvValue('DATABASE_URL', env),
@@ -70,8 +72,7 @@ export function parseEnvToConfig(env: Environment): Config {
     throw new Error('Failed to parse config', { cause: parsedConfig.issues })
   }
 
-  // eslint-disable-next-line no-console
-  console.log('Config parsed', parsedConfig.output)
+  logger?.withFields({ config: parsedConfig.output }).debug('Config parsed')
 
   return parsedConfig.output
 }

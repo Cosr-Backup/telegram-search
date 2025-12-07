@@ -77,22 +77,16 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
 }
 
 async function bootstrap() {
-  const flags = parseEnvFlags(process.env)
-  initLogger(flags.logLevel, flags.logFormat)
-  const logger = useLogger().useGlobalConfig()
-
-  figlet.text('Telegram Search', {
-    // font: 'Ghost',
-    // horizontalLayout: 'default',
-    // verticalLayout: 'default',
-    // width: 80,
-    // whitespaceBreak: true,
-  }, (_, result) => {
+  figlet.text('Telegram Search', (_, result) => {
     // eslint-disable-next-line no-console
     console.log(`\n${result}\nv${pkg.version}\n`)
   })
 
-  const config = parseEnvToConfig(process.env)
+  const flags = parseEnvFlags(process.env)
+  initLogger(flags.logLevel, flags.logFormat)
+  const logger = useLogger().useGlobalConfig()
+
+  const config = parseEnvToConfig(process.env, logger)
 
   try {
     await initDrizzle(logger, config, {
