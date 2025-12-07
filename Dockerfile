@@ -27,6 +27,9 @@ RUN CI=true pnpm install --frozen-lockfile --ignore-scripts
 # Copy source code
 COPY . .
 
+# Build packages
+RUN pnpm run packages:build
+
 # Build web app
 RUN pnpm run web:build
 
