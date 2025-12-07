@@ -17,7 +17,6 @@
     "@node-rs/jieba": "^2.0.1",
     "@tg-search/common": "workspace:*",
     "@tg-search/core": "workspace:*",
-    "@tg-search/schema": "workspace:*",
     "crossws": "^0.4.1",
     "figlet": "^1.9.4",
     "h3": "^2.0.1-rc.5",

@@ -27,6 +27,7 @@ export default defineConfig({
       ignore: [
         '@iconify-json/lucide',
         '@node-rs/jieba-wasm32-wasi',
+        '@valibot/to-json-schema'
       ],
     }),
 

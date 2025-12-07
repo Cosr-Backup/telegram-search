@@ -87,9 +87,6 @@ importers:
       '@tg-search/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tg-search/schema':
-        specifier: workspace:*
-        version: link:../../packages/schema
       crossws:
         specifier: ^0.4.1
         version: 0.4.1(srvx@0.9.7)
