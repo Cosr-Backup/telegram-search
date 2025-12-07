@@ -40,7 +40,6 @@
   },
   "devDependencies": {
     "@proj-airi/unocss-preset-chromatic": "^1.0.2",
-    "@proj-airi/unplugin-drizzle-orm-migrations": "catalog:",
     "@types/nprogress": "^0.2.3",
     "@unocss/eslint-config": "^66.5.10",
     "@unocss/eslint-plugin": "^66.5.10",

@@ -10,9 +10,9 @@
   "scripts": {
     "apply:env": "dotenvx run -f .env -f .env.local --overload --ignore=MISSING_ENV_FILE",
     "start": "concurrently \"pnpm run server:dev\" \"pnpm run web:preview --host 0.0.0.0\"",
-    "server:dev": "pnpm run packages:build && pnpm apply:env -- pnpm -F @tg-search/server dev",
-    "server:build": "pnpm run packages:build && pnpm apply:env -- pnpm -F @tg-search/server build",
-    "server:run": "pnpm run packages:build && pnpm apply:env -- pnpm -F @tg-search/server start",
+    "server:dev": "pnpm apply:env -- pnpm -F @tg-search/server dev",
+    "server:build": "pnpm apply:env -- pnpm -F @tg-search/server build",
+    "server:run": "pnpm apply:env -- pnpm -F @tg-search/server start",
     "web:dev": "pnpm -F @tg-search/web dev",
     "web:build": "pnpm -F @tg-search/web build",
     "web:preview": "pnpm -F @tg-search/web preview",

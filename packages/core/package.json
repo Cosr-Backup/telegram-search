@@ -25,8 +25,9 @@
     "@moeru/eventa": "1.0.0-alpha.9",
     "@moeru/std": "0.1.0-beta.13",
     "@node-rs/jieba": "^2.0.1",
-    "@proj-airi/drizzle-orm-browser-migrator": "catalog:",
+    "@proj-airi/drizzle-orm-browser-migrator": "^0.1.4",
     "@tg-search/common": "workspace:*",
+    "@tg-search/schema": "workspace:*",
     "@unbird/result": "catalog:",
     "@xsai/embed": "catalog:",
     "big-integer": "^1.6.52",
@@ -42,7 +43,6 @@
     "valibot": "^1.2.0"
   },
   "devDependencies": {
-    "@proj-airi/unplugin-drizzle-orm-migrations": "catalog:",
     "@types/pg": "^8.15.6",
     "tsdown": "catalog:"
   }

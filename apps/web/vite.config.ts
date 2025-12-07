@@ -1,7 +1,6 @@
 import { resolve } from 'node:path'
 import { env } from 'node:process'
 
-import DrizzleORMMigrations from '@proj-airi/unplugin-drizzle-orm-migrations/vite'
 import Vue from '@vitejs/plugin-vue'
 import UnoCSS from 'unocss/vite'
 import Info from 'unplugin-info/vite'
@@ -98,10 +97,6 @@ export default defineConfig({
           /^\/ws\//,
         ],
       },
-    }),
-
-    DrizzleORMMigrations({
-      root: '../..',
     }),
 
     splashScreen({

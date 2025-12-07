@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "types": [
+      "@proj-airi/unplugin-drizzle-orm-migrations/types",
       "node"
     ]
   },

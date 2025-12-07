@@ -1,5 +1,3 @@
-import DrizzleORMMigrations from '@proj-airi/unplugin-drizzle-orm-migrations/rolldown'
-
 import { defineConfig } from 'tsdown'
 
 export default defineConfig({
@@ -11,12 +9,6 @@ export default defineConfig({
   shims: true,
   fixedExtension: true,
   sourcemap: true,
-  // unbundle: true,
-  plugins: [
-    DrizzleORMMigrations({
-      root: '../..',
-    }),
-  ],
   external: [
     'vue',
     '@node-rs/jieba',

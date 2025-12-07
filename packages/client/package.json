@@ -24,7 +24,6 @@
     "vue-sonner": "catalog:"
   },
   "devDependencies": {
-    "@proj-airi/unplugin-drizzle-orm-migrations": "catalog:",
     "@types/culori": "^4.0.1",
     "@types/pako": "^2.0.4"
   }

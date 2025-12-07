@@ -2,13 +2,12 @@ import type { Results } from '@electric-sql/pglite'
 import type { Logger } from '@guiiai/logg'
 import type { drizzle as drizzlePglite } from 'drizzle-orm/pglite'
 
-import migrations from 'virtual:drizzle-migrations.sql'
-
 import { IdbFs, PGlite } from '@electric-sql/pglite'
 import { vector } from '@electric-sql/pglite/vector'
 import { defineInvokeEventa, defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/websocket/native'
 import { migrate } from '@proj-airi/drizzle-orm-browser-migrator/pglite'
+import { migrations } from '@tg-search/schema'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/pglite'
 

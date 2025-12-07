@@ -5,12 +5,12 @@ import type { drizzle as drizzlePglite } from 'drizzle-orm/pglite'
 import fs from 'node:fs'
 
 import path from 'pathe'
-import migrations from 'virtual:drizzle-migrations.sql'
 
 import { PGlite } from '@electric-sql/pglite'
 import { vector } from '@electric-sql/pglite/vector'
 import { migrate } from '@proj-airi/drizzle-orm-browser-migrator/pglite'
 import { getDatabaseFilePath } from '@tg-search/common/node'
+import { migrations } from '@tg-search/schema'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/pglite'
 
