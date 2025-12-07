@@ -9,6 +9,7 @@ import { safeParse } from 'valibot'
 import { withDb } from '../db'
 import { accountsTable } from '../schemas/accounts'
 import { accountSettingsSchema } from '../types/account-settings'
+import { generateDefaultAccountSettings } from '../utils/account-settings'
 
 /**
  * Fetch settings by accountId
@@ -21,10 +22,14 @@ export async function fetchSettingsByAccountId(accountId: string): Promise<Resul
     .limit(1),
   )).expect('Failed to fetch account settings')
 
-  if (result.length > 0 && result[0].settings)
-    return Ok(result[0].settings)
-  else
-    return Err('Failed to fetch account settings')
+  if (result.length > 0 && result[0].settings) {
+    const parsedSettings = safeParse(accountSettingsSchema, result[0].settings)
+    if (parsedSettings.success) {
+      return Ok(parsedSettings.output)
+    }
+  }
+
+  return Ok(generateDefaultAccountSettings())
 }
 
 /**
