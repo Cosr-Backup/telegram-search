@@ -32,16 +32,16 @@
 
 import type { Config } from '@tg-search/common'
 import type { CoreContext, CoreEventData, FromCoreEvent, ToCoreEvent } from '@tg-search/core'
-import type { App } from 'h3'
+import type { Peer } from 'crossws'
+import type { H3 } from 'h3'
 
-import type { WsMessageToServer } from './events'
-import type { Peer } from './types'
+import type { WsMessageToServer } from './ws-events'
 
 import { useLogger } from '@guiiai/logg'
 import { createCoreInstance, destroyCoreInstance } from '@tg-search/core'
 import { defineWebSocketHandler } from 'h3'
 
-import { sendWsEvent } from './events'
+import { sendWsEvent } from './ws-events'
 
 /**
  * Account state - one per Telegram account
@@ -87,7 +87,7 @@ export interface AccountState {
   lastActive: number
 }
 
-export function setupWsRoutes(app: App, config: Config) {
+export function setupWsRoutes(app: H3, config: Config) {
   const logger = useLogger('server:ws')
 
   /**
@@ -157,12 +157,12 @@ export function setupWsRoutes(app: App, config: Config) {
   // We need to track peer objects for broadcasting
   const peerObjects = new Map<string, Peer>()
 
-  app.use('/ws', defineWebSocketHandler({
+  app.get('/ws', defineWebSocketHandler({
     async upgrade(req) {
       const url = new URL(req.url)
       const urlSessionId = url.searchParams.get('sessionId')
 
-      if (!urlSessionId) {
+      if (!urlSessionId || urlSessionId === '') {
         return Response.json({ success: false, error: 'Session ID is required' }, { status: 400 })
       }
     },

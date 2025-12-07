@@ -17,7 +17,8 @@
     "@node-rs/jieba": "^2.0.1",
     "@tg-search/common": "workspace:*",
     "@tg-search/core": "workspace:*",
-    "h3": "^1.15.4",
+    "crossws": "^0.4.1",
+    "h3": "^2.0.1-rc.5",
     "listhen": "^1.9.0",
     "prom-client": "^15.1.3"
   },

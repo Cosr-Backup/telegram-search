@@ -39,6 +39,7 @@ const isLoadingOlder = ref(false)
 const isLoadingNewer = ref(false)
 const virtualListRef = ref<InstanceType<typeof VirtualMessageList>>()
 
+// @ts-expect-error: TODO: already used, fix it?
 const searchDialogRef = ref<InstanceType<typeof SearchDialog> | null>(null)
 const isGlobalSearchOpen = ref(false)
 

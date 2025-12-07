@@ -1,6 +1,5 @@
 import type { FromCoreEvent, ToCoreEvent } from '@tg-search/core'
-
-import type { Peer } from './types'
+import type { Peer } from 'crossws'
 
 import { useLogger } from '@guiiai/logg'
 

@@ -1,18 +1,17 @@
 import type { Config, RuntimeFlags } from '@tg-search/common'
-import type { CrossWSOptions } from 'listhen'
 
 import process from 'node:process'
 
 import { initLogger, useLogger } from '@guiiai/logg'
 import { parseEnvFlags, parseEnvToConfig } from '@tg-search/common'
 import { initDrizzle } from '@tg-search/core'
-import { createApp, createRouter, defineEventHandler, toNodeListener } from 'h3'
-import { listen } from 'listhen'
+import { plugin as wsPlugin } from 'crossws/server'
+import { defineEventHandler, H3, serve } from 'h3'
 import { collectDefaultMetrics, register } from 'prom-client'
 
 import pkg from '../package.json' with { type: 'json' }
 
-import { setupWsRoutes } from './ws/routes'
+import { setupWsRoutes } from './ws-routes'
 
 function setupErrorHandlers(logger: ReturnType<typeof useLogger>): void {
   const handleError = (error: unknown, type: string) => {
@@ -24,7 +23,7 @@ function setupErrorHandlers(logger: ReturnType<typeof useLogger>): void {
 }
 
 function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFlags, config: Config) {
-  const app = createApp({
+  const app = new H3({
     debug: flags.isDebugMode,
     onRequest(event) {
       const path = event.path
@@ -33,7 +32,7 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
       logger.withFields({
         method,
         path,
-      }).log('Request started')
+      }).debug('Request started')
     },
     onError(error, event) {
       const path = event.path
@@ -57,13 +56,12 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
     },
   })
 
-  const router = createRouter()
-  router.get('/health', defineEventHandler(() => {
+  app.get('/health', defineEventHandler(() => {
     return Response.json({ success: true })
   }))
 
   collectDefaultMetrics()
-  router.get('/metrics', defineEventHandler(async () => {
+  app.get('/metrics', defineEventHandler(async () => {
     const metrics = await register.metrics()
     return new Response(metrics, {
       status: 200,
@@ -71,7 +69,6 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
     })
   }))
 
-  app.use(router)
   setupWsRoutes(app, config)
 
   return app
@@ -101,17 +98,25 @@ async function bootstrap() {
   setupErrorHandlers(logger)
 
   const app = configureServer(logger, flags, config)
-  const listener = toNodeListener(app)
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3000
   const hostname = process.env.HOST || '0.0.0.0'
-  const server = await listen(listener, {
+
+  const server = serve(app, {
     port,
     hostname,
-    ws: app.websocket as CrossWSOptions,
+    plugins: [
+      // @ts-expect-error - the .crossws property wasn't extended in types
+      wsPlugin({ resolve: async req => (await app.fetch(req)).crossws }),
+    ],
+    reusePort: true,
+    gracefulShutdown: {
+      forceTimeout: 500,
+      gracefulTimeout: 500,
+    },
   })
 
-  logger.log('Server started')
+  logger.withFields({ port, hostname }).log('Server started')
 
   const shutdown = () => {
     logger.log('Shutting down server gracefully...')
