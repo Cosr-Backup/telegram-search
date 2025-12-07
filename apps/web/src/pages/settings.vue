@@ -239,7 +239,10 @@ function updateConfig() {
       </div>
 
       <!-- Receive messages settings -->
-      <div class="border rounded-lg bg-card p-6 shadow-sm">
+      <div
+        v-if="accountSettings.receiveMessages"
+        class="border rounded-lg bg-card p-6 shadow-sm"
+      >
         <h2 class="mb-4 text-xl font-semibold">
           {{ t('settings.receiveMessagesSettings') }}
         </h2>
