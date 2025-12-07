@@ -18,6 +18,7 @@ COPY packages/core/package.json ./packages/core/package.json
 COPY packages/common/package.json ./packages/common/package.json
 COPY packages/client/package.json ./packages/client/package.json
 COPY packages/pglite-inspector/package.json ./packages/pglite-inspector/package.json
+COPY packages/schema/package.json ./packages/schema/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/server/package.json ./apps/server/package.json
 
