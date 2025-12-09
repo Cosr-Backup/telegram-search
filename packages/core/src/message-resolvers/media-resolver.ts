@@ -15,7 +15,7 @@ import { fileTypeFromBuffer } from 'file-type'
 import { MEDIA_DOWNLOAD_CONCURRENCY } from '../constants'
 import { useDrizzle } from '../db'
 import {
-  findPhotoByFileId,
+  findPhotoByFileIdWithMimeType,
   getStickerQueryIdByFileId,
   recordPhotos,
   recordStickers,
@@ -49,12 +49,12 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
             // Stickers: prefer existing DB row -> queryId, otherwise download & store.
             if (media.type === 'sticker') {
               try {
-                const queryId = (await getStickerQueryIdByFileId(db, media.platformId)).orUndefined() as string | undefined
+                const sticker = (await getStickerQueryIdByFileId(db, media.platformId)).orUndefined()
 
-                if (queryId) {
+                if (sticker) {
                   return {
                     messageUUID: message.uuid,
-                    queryId,
+                    queryId: sticker.id,
                     type: media.type,
                     platformId: media.platformId,
                   } satisfies CoreMessageMediaFromServer
@@ -68,18 +68,14 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
             // Photos: prefer existing DB row -> queryId, otherwise download & store.
             if (media.type === 'photo') {
               try {
-                const photo = (await findPhotoByFileId(db, media.platformId)).orUndefined()
-                if (photo && photo.id) {
-                  const cachedBytes = photo.image_bytes
-                  const mimeType = cachedBytes ? (await fileTypeFromBuffer(cachedBytes))?.mime : undefined
-
-                  // FIXME: store the mime type in the DB
+                const photo = (await findPhotoByFileIdWithMimeType(db, media.platformId)).orUndefined()
+                if (photo) {
                   return {
                     messageUUID: message.uuid,
                     queryId: photo.id,
+                    mimeType: photo.mimeType,
                     type: media.type,
                     platformId: media.platformId,
-                    mimeType,
                   } satisfies CoreMessageMediaFromServer
                 }
               }
@@ -94,6 +90,8 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
             const mediaFetched = await ctx.getClient().downloadMedia(apiMedia)
             const byte = mediaFetched instanceof Buffer ? mediaFetched : undefined
 
+            // TODO: download video by _downloadDocument
+
             if (!byte) {
               logger.warn(`Media is not a buffer, ${mediaFetched?.constructor.name}`)
             }
@@ -101,17 +99,18 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
             // Persist media bytes when available so future fetches can use queryId/HTTP endpoint.
             try {
               if (media.type === 'photo' && byte) {
+                const mimeType = (await fileTypeFromBuffer(byte))?.mime
+
                 const result = await recordPhotos([{
                   type: 'photo',
                   platformId: media.platformId,
                   messageUUID: message.uuid,
                   byte,
+                  mimeType,
                 }])
 
                 const inserted = result?.unwrap()?.[0]
                 if (inserted?.id) {
-                  const mimeType = (await fileTypeFromBuffer(byte))?.mime
-
                   return {
                     messageUUID: message.uuid,
                     queryId: inserted.id,
@@ -123,15 +122,17 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
               }
 
               if (media.type === 'sticker' && byte) {
+                const mimeType = (await fileTypeFromBuffer(byte))?.mime
+
                 const result = await recordStickers([{
                   type: 'sticker',
                   platformId: media.platformId,
                   messageUUID: message.uuid,
                   byte,
+                  mimeType,
                 }])
 
                 const inserted = result?.unwrap()?.[0]
-                const mimeType = (await fileTypeFromBuffer(byte))?.mime
 
                 if (inserted?.id) {
                   return {

@@ -6,7 +6,7 @@ import type { Buffer } from 'buffer'
 import type { CoreDB } from '../db'
 import type { CoreMessageMediaSticker } from '../types/media'
 
-import { Err, Ok } from '@unbird/result'
+import { Ok } from '@unbird/result'
 import { eq, sql } from 'drizzle-orm'
 
 import { withDb } from '../db'
@@ -51,11 +51,7 @@ export async function getStickerQueryIdByFileId(db: CoreDB, fileId: string) {
     .where(eq(stickersTable.file_id, fileId))
     .limit(1)
 
-  if (stickers.length === 0) {
-    return Err(new Error('Sticker not found'))
-  }
-
-  return Ok(stickers[0].id)
+  return Ok(must0(stickers))
 }
 
 type StickerMediaForRecord = CoreMessageMediaSticker & {
