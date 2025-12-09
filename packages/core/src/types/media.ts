@@ -44,6 +44,9 @@ export type CoreMessageMediaDocument = CoreMessageMediaBase & {
   type: 'document'
 }
 
+/**
+ * @deprecated Temporarily remove the webpage support.
+ */
 export type CoreMessageMediaWebPage = CoreMessageMediaBase & {
   type: 'webpage'
 }

@@ -9,8 +9,6 @@ import { hydrateMediaBlobWithCore, useSettingsStore } from '@tg-search/client'
 import { storeToRefs } from 'pinia'
 import { computed, onUnmounted, ref, watch } from 'vue'
 
-import MediaWebpage from './MediaWebpage.vue'
-
 const props = defineProps<{
   message: CoreMessage & {
     media?: CoreMessageMediaFromBlob[]
@@ -54,14 +52,15 @@ const processedMedia = computed<ProcessedMedia>(() => {
   }
 
   switch (mediaItem.type) {
-    case 'webpage': {
-      // Webpage previews are not hydrated from Telegram raw media anymore.
-      // Rely on content text and treat as a simple link/web preview.
-      return {
-        src: undefined,
-        type: mediaItem.type,
-      } satisfies ProcessedMedia
-    }
+    // TODO: temporarily remove the webpage support
+    // case 'webpage': {
+    //   // Webpage previews are not hydrated from Telegram raw media anymore.
+    //   // Rely on content text and treat as a simple link/web preview.
+    //   return {
+    //     src: undefined,
+    //     type: mediaItem.type,
+    //   } satisfies ProcessedMedia
+    // }
     case 'photo': {
       return {
         src: mediaItem.blobUrl,
@@ -69,12 +68,18 @@ const processedMedia = computed<ProcessedMedia>(() => {
         mimeType: mediaItem.mimeType,
       } satisfies ProcessedMedia
     }
-    default:
+    case 'sticker': {
       return {
         src: mediaItem.blobUrl,
         type: mediaItem.type,
         mimeType: mediaItem.mimeType,
-        tgsAnimationData: mediaItem.type === 'sticker' ? mediaItem.tgsAnimationData : undefined,
+        tgsAnimationData: mediaItem.tgsAnimationData,
+      } satisfies ProcessedMedia
+    }
+    default:
+      return {
+        src: undefined,
+        type: 'unknown',
       } satisfies ProcessedMedia
   }
 })
@@ -140,6 +145,10 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <code v-if="debugMode" class="whitespace-pre-wrap text-xs">
+    {{ processedMedia }}
+  </code>
+
   <div v-if="message.content" class="mb-2 whitespace-pre-wrap text-gray-900 dark:text-gray-100">
     {{ message.content }}
   </div>
@@ -162,14 +171,8 @@ onUnmounted(() => {
 
   <!-- Media content -->
   <div v-if="processedMedia.src || processedMedia.tgsAnimationData">
-    <MediaWebpage
-      v-if="processedMedia.type === 'webpage'"
-      v-model:runtime-error="runtimeError"
-      :processed-media="processedMedia"
-    />
-
     <img
-      v-else-if="processedMedia.mimeType?.startsWith('image/')"
+      v-if="processedMedia.mimeType?.startsWith('image/')"
       :src="processedMedia.src"
       class="h-auto max-w-xs rounded-lg"
       :style="processedMedia.width && processedMedia.height

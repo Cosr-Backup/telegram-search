@@ -15,7 +15,7 @@ import { fileTypeFromBuffer } from 'file-type'
 import { MEDIA_DOWNLOAD_CONCURRENCY } from '../constants'
 import { useDrizzle } from '../db'
 import {
-  getPhotoQueryIdByFileId,
+  findPhotoByFileId,
   getStickerQueryIdByFileId,
   recordPhotos,
   recordStickers,
@@ -46,7 +46,6 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
 
             const db = useDrizzle()
 
-            // TODO: store the mime type in the DB
             // Stickers: prefer existing DB row -> queryId, otherwise download & store.
             if (media.type === 'sticker') {
               try {
@@ -69,14 +68,18 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
             // Photos: prefer existing DB row -> queryId, otherwise download & store.
             if (media.type === 'photo') {
               try {
-                const queryId = (await getPhotoQueryIdByFileId(db, media.platformId)).orUndefined() as string | undefined
-                if (queryId) {
-                  // MimeType can be determined by the API endpoint when the media is requested.
+                const photo = (await findPhotoByFileId(db, media.platformId)).orUndefined()
+                if (photo && photo.id) {
+                  const cachedBytes = photo.image_bytes
+                  const mimeType = cachedBytes ? (await fileTypeFromBuffer(cachedBytes))?.mime : undefined
+
+                  // FIXME: store the mime type in the DB
                   return {
                     messageUUID: message.uuid,
-                    queryId,
+                    queryId: photo.id,
                     type: media.type,
                     platformId: media.platformId,
+                    mimeType,
                   } satisfies CoreMessageMediaFromServer
                 }
               }
