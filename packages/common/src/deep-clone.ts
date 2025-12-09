@@ -3,6 +3,7 @@ export function deepClone<T>(data?: T): T | undefined {
     return data
 
   try {
+    // return structuredClone(data) as T
     return JSON.parse(JSON.stringify(data)) as T
   }
   catch (error) {
