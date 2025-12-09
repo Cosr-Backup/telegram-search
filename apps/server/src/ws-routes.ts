@@ -30,7 +30,7 @@
  * See PR #434 for detailed discussion and review comments
  */
 
-import type { Config } from '@tg-search/common'
+import type { Config, CoreCounter, CoreHistogram, CoreMetrics } from '@tg-search/common'
 import type { CoreContext, CoreEventData, FromCoreEvent, ToCoreEvent } from '@tg-search/core'
 import type { Peer } from 'crossws'
 import type { H3 } from 'h3'
@@ -40,8 +40,68 @@ import type { WsMessageToServer } from './ws-events'
 import { useLogger } from '@guiiai/logg'
 import { createCoreInstance, destroyCoreInstance } from '@tg-search/core'
 import { defineWebSocketHandler } from 'h3'
+import { Counter, Gauge, Histogram } from 'prom-client'
 
 import { sendWsEvent } from './ws-events'
+
+const WS_MODE_LABEL = 'server' as const
+
+const wsConnectionsActive = new Gauge({
+  name: 'ws_connections_active',
+  help: 'Number of active WebSocket connections',
+  labelNames: ['mode'] as const,
+})
+
+const coreEventsInTotal = new Counter({
+  name: 'core_events_in_total',
+  help: 'Total number of events sent from client to core',
+  labelNames: ['event_name'] as const,
+})
+
+const coreMessagesProcessedTotal = new Counter({
+  name: 'core_messages_processed_total',
+  help: 'Total number of messages processed by core message resolver',
+  labelNames: ['source'] as const, // realtime | takeout
+})
+
+const coreMessageBatchesProcessedTotal = new Counter({
+  name: 'core_message_batches_processed_total',
+  help: 'Total number of message batches processed by core message resolver',
+  labelNames: ['source'] as const, // realtime | takeout
+})
+
+const coreMessageBatchDurationMs = new Histogram({
+  name: 'core_message_batch_duration_ms',
+  help: 'Duration of message processing batches in milliseconds',
+  labelNames: ['source'] as const, // realtime | takeout
+  buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
+})
+
+function createPromCounter(counter: Counter): CoreCounter {
+  return {
+    inc(labels?: Record<string, string>, value?: number) {
+      if (labels) {
+        counter.inc(labels as any, value)
+      }
+      else {
+        counter.inc(value)
+      }
+    },
+  }
+}
+
+function createPromHistogram(histogram: Histogram): CoreHistogram {
+  return {
+    observe(labels: Record<string, string>, value: number) {
+      histogram.observe(labels as any, value)
+    },
+  }
+}
+
+const coreMetrics: CoreMetrics = {
+  messagesProcessed: createPromCounter(coreMessagesProcessedTotal),
+  messageBatchDuration: createPromHistogram(coreMessageBatchDurationMs),
+}
 
 /**
  * Account state - one per Telegram account
@@ -147,7 +207,7 @@ export function setupWsRoutes(app: H3, config: Config) {
     if (!accountStates.has(accountId)) {
       logger.withFields({ accountId }).log('Creating new account state')
 
-      const ctx = createCoreInstance(config)
+      const ctx = createCoreInstance(config, coreMetrics)
       const account: AccountState = {
         ctx,
         accountReady: false,
@@ -156,6 +216,13 @@ export function setupWsRoutes(app: H3, config: Config) {
         createdAt: Date.now(),
         lastActive: Date.now(),
       }
+
+      // Instrument core message processing for this account
+      ctx.emitter.on('message:process', ({ messages, isTakeout }) => {
+        const source = isTakeout ? 'takeout' : 'realtime'
+        coreMessageBatchesProcessedTotal.inc({ source })
+        coreMessagesProcessedTotal.inc({ source }, messages.length)
+      })
 
       accountStates.set(accountId, account)
       return account
@@ -184,6 +251,7 @@ export function setupWsRoutes(app: H3, config: Config) {
       const accountId = url.searchParams.get('sessionId') || crypto.randomUUID()
 
       logger.withFields({ peerId: peer.id, accountId }).log('WebSocket connection opened')
+      wsConnectionsActive.inc({ mode: WS_MODE_LABEL })
 
       // Get or create account state (reuses existing if available)
       const account = getOrCreateAccount(accountId, config)
@@ -269,6 +337,10 @@ export function setupWsRoutes(app: H3, config: Config) {
         else {
           logger.withFields({ type: event.type, accountId }).verbose('Message received')
 
+          if (!event.type.startsWith('server:')) {
+            coreEventsInTotal.inc({ event_name: event.type })
+          }
+
           // Emit to core context
           account.ctx.emitter.emit(event.type, event.data as CoreEventData<keyof ToCoreEvent>)
         }
@@ -323,6 +395,7 @@ export function setupWsRoutes(app: H3, config: Config) {
 
     async close(peer) {
       logger.withFields({ peerId: peer.id }).log('WebSocket connection closed')
+      wsConnectionsActive.dec({ mode: WS_MODE_LABEL })
 
       const accountId = peerToAccountId.get(peer.id)
       if (!accountId) {
