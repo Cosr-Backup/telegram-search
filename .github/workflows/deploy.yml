@@ -21,8 +21,8 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      - name: Install
-        run: pnpm install
+      - run: pnpm i -g wrangler@4
+      - run: pnpm install --frozen-lockfile
 
       - name: Determine deployment branch
         id: deployment_branch
