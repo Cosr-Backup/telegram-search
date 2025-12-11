@@ -24,6 +24,8 @@ const messageResolvers = [
   { key: 'embedding' },
 ]
 
+const embeddingDimensions = Object.values([1536, 1024, 768])
+
 // Computed properties for message resolver switches
 const isResolverEnabled = computed(() => (resolverKey: string) => {
   if (!accountSettings.value?.resolvers?.disabledResolvers)
@@ -147,14 +149,8 @@ function updateConfig() {
                   v-model="accountSettings.embedding.dimension"
                   class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <option :value="1536">
-                    1536
-                  </option>
-                  <option :value="1024">
-                    1024
-                  </option>
-                  <option :value="768">
-                    768
+                  <option v-for="dimension in embeddingDimensions" :key="dimension" :value="dimension">
+                    {{ dimension }}
                   </option>
                 </select>
               </div>

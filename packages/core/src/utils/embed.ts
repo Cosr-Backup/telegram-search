@@ -24,7 +24,7 @@ export async function embedContents(
        *
        * @see {@link https://platform.openai.com/docs/api-reference/embeddings/object}
        */
-      dimension: embeddingConfig.dimension,
+      dimensions: embeddingConfig.dimension,
     })
 
     if (embeddings.embeddings.length > 0) {
