@@ -12,6 +12,7 @@ on:
 
 jobs:
   ghcr_build:
+    timeout-minutes: 15
     name: Release
     runs-on: ubuntu-latest
 

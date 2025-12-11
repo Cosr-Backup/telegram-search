@@ -105,6 +105,7 @@ jobs:
         run: "echo 'Downgraded: ${{ steps.check.outputs.downgraded }}'"
 
   build-docker-image:
+    timeout-minutes: 15
     if: github.event_name == 'pull_request'
     name: Build Docker Image Test
     runs-on: ubuntu-latest
