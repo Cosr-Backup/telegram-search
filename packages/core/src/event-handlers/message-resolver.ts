@@ -15,13 +15,19 @@ export function registerMessageResolverEventHandlers(ctx: CoreContext) {
 
     // TODO: debounce, background tasks
     emitter.on('message:process', ({ messages, isTakeout = false, syncOptions }) => {
-      void queue.add(async () => {
-        try {
-          await messageResolverService.processMessages(messages, { takeout: isTakeout, syncOptions })
-        }
-        catch (error) {
+      if (!isTakeout) {
+        messageResolverService.processMessages(messages, { takeout: isTakeout, syncOptions }).catch((error) => {
           logger.withError(error).warn('Failed to process messages')
-        }
+        })
+
+        return
+      }
+
+      // Only use queue for takeout mode to avoid overwhelming the system.
+      void queue.add(async () => {
+        messageResolverService.processMessages(messages, { takeout: isTakeout, syncOptions }).catch((error) => {
+          logger.withError(error).warn('Failed to process messages')
+        })
       })
     })
   }
