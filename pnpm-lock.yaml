@@ -169,6 +169,9 @@ importers:
       nprogress:
         specifier: ^0.2.0
         version: 0.2.0
+      pako:
+        specifier: ^2.1.0
+        version: 2.1.0
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.25(typescript@5.9.3))
@@ -206,6 +209,9 @@ importers:
       '@types/nprogress':
         specifier: ^0.2.3
         version: 0.2.3
+      '@types/pako':
+        specifier: ^2.0.4
+        version: 2.0.4
       '@unocss/eslint-config':
         specifier: ^66.5.10
         version: 66.5.10(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
@@ -290,9 +296,6 @@ importers:
       ofetch:
         specifier: ^1.5.1
         version: 1.5.1
-      pako:
-        specifier: ^2.1.0
-        version: 2.1.0
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.25(typescript@5.9.3))
@@ -309,9 +312,6 @@ importers:
       '@types/culori':
         specifier: ^4.0.1
         version: 4.0.1
-      '@types/pako':
-        specifier: ^2.0.4
-        version: 2.0.4
 
   packages/common:
     dependencies:

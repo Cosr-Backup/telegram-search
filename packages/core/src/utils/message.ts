@@ -73,7 +73,7 @@ export function convertToCoreMessage(message: Api.Message): Result<CoreMessage> 
       messageUUID,
       type: parseMediaType(message.media),
       platformId: parseMediaId(message.media),
-    })
+    } as CoreMessageMediaFromServer)
   }
 
   return Ok(

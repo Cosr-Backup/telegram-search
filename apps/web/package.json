@@ -27,6 +27,7 @@
     "lottie-web": "^5.13.0",
     "nanoid": "^5.1.6",
     "nprogress": "^0.2.0",
+    "pako": "^2.1.0",
     "pinia": "^3.0.4",
     "telegram": "2.26.21",
     "valibot": "^1.2.0",
@@ -41,6 +42,7 @@
   "devDependencies": {
     "@proj-airi/unocss-preset-chromatic": "^1.0.2",
     "@types/nprogress": "^0.2.3",
+    "@types/pako": "^2.0.4",
     "@unocss/eslint-config": "^66.5.10",
     "@unocss/eslint-plugin": "^66.5.10",
     "@unocss/reset": "^66.5.10",

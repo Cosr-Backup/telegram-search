@@ -8,7 +8,7 @@ import { stickersTable } from '../../schemas/stickers'
 import {
   findStickerByFileId,
   findStickerByQueryId,
-  getStickerQueryIdByFileId,
+  getStickerQueryIdByFileIdWithMimeType,
   recordStickers,
 } from '../stickers'
 
@@ -93,7 +93,7 @@ describe('models/stickers', () => {
     const byFileId = (await findStickerByFileId(db, 'file-123')).unwrap()
     expect(byFileId.id).toBe(inserted.id)
 
-    const queryId = (await getStickerQueryIdByFileId(db, 'file-123')).unwrap()
+    const queryId = (await getStickerQueryIdByFileIdWithMimeType(db, 'file-123')).unwrap()
     expect(queryId.id).toBe(inserted.id)
 
     const byQueryId = (await findStickerByQueryId(db, inserted.id)).unwrap()

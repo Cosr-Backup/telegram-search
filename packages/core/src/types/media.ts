@@ -32,23 +32,20 @@ export type CoreMessageMediaSticker = CoreMessageMediaBase & {
    * Emoji associated with the sticker (if available).
    */
   emoji?: string
-
-  /**
-   * TGS animation data (uncompressed JSON string).
-   * Kept for backward compatibility; new flows should prefer queryId.
-   */
-  tgsAnimationData?: string
 }
 
 export type CoreMessageMediaDocument = CoreMessageMediaBase & {
   type: 'document'
 }
 
-/**
- * @deprecated Temporarily remove the webpage support.
- */
 export type CoreMessageMediaWebPage = CoreMessageMediaBase & {
   type: 'webpage'
+  title: string
+  description?: string
+  siteName?: string
+  url?: string
+  displayUrl?: string
+  previewImage?: string
 }
 
 export type CoreMessageMediaUnknown = CoreMessageMediaBase & {
@@ -61,6 +58,8 @@ export type CoreMessageMedia
     | CoreMessageMediaDocument
     | CoreMessageMediaWebPage
     | CoreMessageMediaUnknown
+
+export type CoreMessageMediaType = CoreMessageMedia['type']
 
 /**
  * Media representation used in the core pipeline (server-side).

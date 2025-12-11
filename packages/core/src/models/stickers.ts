@@ -31,10 +31,11 @@ export async function recordStickers(db: CoreDB, stickers: (CoreMessageMediaStic
     .filter(sticker => sticker.byte != null)
     .map(sticker => ({
       platform: 'telegram',
-      file_id: sticker.platformId ?? '',
+      file_id: sticker.platformId,
       sticker_bytes: sticker.byte,
-      emoji: sticker.emoji ?? '',
-    }))
+      emoji: sticker.emoji,
+      sticker_mime_type: sticker.mimeType,
+    } satisfies DBInsertSticker))
 
   if (dataToInsert.length === 0) {
     return []
@@ -48,6 +49,7 @@ export async function recordStickers(db: CoreDB, stickers: (CoreMessageMediaStic
       set: {
         emoji: sql`excluded.emoji`,
         sticker_bytes: sql`excluded.sticker_bytes`,
+        sticker_mime_type: sql`excluded.sticker_mime_type`,
         updated_at: Date.now(),
       },
     })
@@ -86,11 +88,12 @@ export async function findStickerByQueryId(db: CoreDB, queryId: string): Promise
 /**
  * Get the query_id for a sticker by file_id
  */
-export async function getStickerQueryIdByFileId(db: CoreDB, fileId: string): PromiseResult<{ id: string }> {
+export async function getStickerQueryIdByFileIdWithMimeType(db: CoreDB, fileId: string): PromiseResult<{ id: string, mimeType: string }> {
   return withResult(async () => {
     const stickers = await db
       .select({
         id: stickersTable.id,
+        mimeType: stickersTable.sticker_mime_type,
       })
       .from(stickersTable)
       .where(eq(stickersTable.file_id, fileId))

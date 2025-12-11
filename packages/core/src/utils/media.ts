@@ -1,8 +1,8 @@
-import type { CoreMessageMedia } from '../types/media'
+import type { CoreMessageMediaType } from '../types/media'
 
 import { Api } from 'telegram'
 
-export function parseMediaType(apiMedia: Api.TypeMessageMedia): CoreMessageMedia['type'] {
+export function parseMediaType(apiMedia: Api.TypeMessageMedia): CoreMessageMediaType {
   switch (true) {
     case apiMedia instanceof Api.MessageMediaPhoto:
       return 'photo'

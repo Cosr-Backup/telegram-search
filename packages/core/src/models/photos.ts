@@ -30,6 +30,7 @@ export async function recordPhotos(db: CoreDB, media: (CoreMessageMediaPhoto & {
         file_id: media.platformId,
         message_id: media.messageUUID,
         image_bytes: media.byte,
+        image_mime_type: media.mimeType,
       } satisfies DBInsertPhoto),
     )
 
@@ -44,6 +45,7 @@ export async function recordPhotos(db: CoreDB, media: (CoreMessageMediaPhoto & {
       target: [photosTable.platform, photosTable.file_id],
       set: {
         image_bytes: sql`excluded.image_bytes`,
+        image_mime_type: sql`excluded.image_mime_type`,
         updated_at: Date.now(),
       },
     })

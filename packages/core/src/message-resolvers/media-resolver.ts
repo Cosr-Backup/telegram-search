@@ -1,8 +1,6 @@
-import type { Api } from 'telegram'
-
 import type { MessageResolver, MessageResolverOpts } from '.'
 import type { CoreContext } from '../context'
-import type { CoreMessageMediaFromServer } from '../types/media'
+import type { CoreMessageMediaFromServer, CoreMessageMediaPhoto, CoreMessageMediaSticker, CoreMessageMediaUnknown, CoreMessageMediaWebPage } from '../types/media'
 import type { CoreMessage } from '../types/message'
 
 // eslint-disable-next-line unicorn/prefer-node-protocol
@@ -11,12 +9,13 @@ import { Buffer } from 'buffer'
 import { useLogger } from '@guiiai/logg'
 import { newQueue } from '@henrygd/queue'
 import { fileTypeFromBuffer } from 'file-type'
+import { Api } from 'telegram'
 
 import { MEDIA_DOWNLOAD_CONCURRENCY } from '../constants'
 import { useDrizzle } from '../db'
 import {
   findPhotoByFileIdWithMimeType,
-  getStickerQueryIdByFileId,
+  getStickerQueryIdByFileIdWithMimeType,
   recordPhotos,
   recordStickers,
 } from '../models'
@@ -50,7 +49,7 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
             // Stickers: prefer existing DB row -> queryId, otherwise download & store.
             if (media.type === 'sticker') {
               try {
-                const sticker = (await getStickerQueryIdByFileId(db, media.platformId)).orUndefined()
+                const sticker = (await getStickerQueryIdByFileIdWithMimeType(db, media.platformId)).orUndefined()
 
                 if (sticker) {
                   return {
@@ -58,6 +57,7 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
                     queryId: sticker.id,
                     type: media.type,
                     platformId: media.platformId,
+                    mimeType: sticker.mimeType,
                   } satisfies CoreMessageMediaFromServer
                 }
               }
@@ -93,55 +93,87 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
 
             // TODO: download video by _downloadDocument
 
-            if (!byte) {
+            if (!byte || !(byte instanceof Buffer)) {
               logger.warn(`Media is not a buffer, ${mediaFetched?.constructor.name}`)
             }
 
             // Persist media bytes when available so future fetches can use queryId/HTTP endpoint.
             try {
-              if (media.type === 'photo' && byte) {
-                const mimeType = (await fileTypeFromBuffer(byte))?.mime
+              switch (media.type) {
+                case 'photo': {
+                  if (!byte)
+                    break
 
-                const result = await recordPhotos(db, [{
-                  type: 'photo',
-                  platformId: media.platformId,
-                  messageUUID: message.uuid,
-                  byte,
-                  mimeType,
-                }])
+                  const mimeType = (await fileTypeFromBuffer(byte))?.mime
+                  logger.debug('Mime type', { type: media.type, mimeType })
 
-                const inserted = must0(result)
-                if (inserted?.id) {
+                  const result = await recordPhotos(db, [{
+                    type: 'photo',
+                    platformId: media.platformId,
+                    messageUUID: message.uuid,
+                    byte,
+                    mimeType,
+                  }])
+
+                  const inserted = must0(result)
+                  if (!inserted?.id)
+                    break
+
                   return {
                     messageUUID: message.uuid,
                     queryId: inserted.id,
                     type: media.type,
                     platformId: media.platformId,
                     mimeType,
-                  } satisfies CoreMessageMediaFromServer
+                  } satisfies CoreMessageMediaPhoto
                 }
-              }
 
-              if (media.type === 'sticker' && byte) {
-                const mimeType = (await fileTypeFromBuffer(byte))?.mime
+                case 'sticker': {
+                  if (!byte)
+                    break
 
-                const result = await recordStickers(db, [{
-                  type: 'sticker',
-                  platformId: media.platformId,
-                  messageUUID: message.uuid,
-                  byte,
-                  mimeType,
-                }])
+                  const mimeType = (await fileTypeFromBuffer(byte))?.mime
+                  logger.debug('Mime type', { type: media.type, mimeType })
 
-                const inserted = must0(result)
-                if (inserted?.id) {
+                  const result = await recordStickers(db, [{
+                    type: 'sticker',
+                    platformId: media.platformId,
+                    messageUUID: message.uuid,
+                    byte,
+                    mimeType,
+                  }])
+
+                  const inserted = must0(result)
+                  if (!inserted?.id)
+                    break
+
                   return {
                     messageUUID: message.uuid,
                     queryId: inserted.id,
                     type: media.type,
                     platformId: media.platformId,
                     mimeType,
-                  } satisfies CoreMessageMediaFromServer
+                  } satisfies CoreMessageMediaSticker
+                }
+
+                case 'webpage': {
+                  if (!(rawMessage.media instanceof Api.MessageMediaWebPage))
+                    break
+
+                  const webpage = rawMessage.media.webpage as Api.WebPage
+                  if (!rawMessage.media.webpage || rawMessage.media.webpage instanceof Api.WebPageEmpty)
+                    break
+
+                  return {
+                    messageUUID: message.uuid,
+                    type: media.type,
+                    platformId: media.platformId,
+                    title: webpage.title ?? 'Unknown',
+                    description: webpage.description,
+                    siteName: webpage.siteName,
+                    url: webpage.url,
+                    displayUrl: webpage.displayUrl,
+                  } satisfies CoreMessageMediaWebPage
                 }
               }
             }
@@ -152,10 +184,10 @@ export function createMediaResolver(ctx: CoreContext): MessageResolver {
             // Last resort: return media without queryId, using best-effort mimeType if we have bytes.
             return {
               messageUUID: message.uuid,
-              type: media.type,
+              type: 'unknown',
               platformId: media.platformId,
-              mimeType: byte ? (await fileTypeFromBuffer(byte))?.mime : undefined,
-            } satisfies CoreMessageMediaFromServer
+              mimeType: byte ? (await fileTypeFromBuffer(byte))?.mime || 'application/octet-stream' : undefined,
+            } satisfies CoreMessageMediaUnknown
           }),
         )
 
