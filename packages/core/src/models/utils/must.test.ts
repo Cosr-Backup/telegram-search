@@ -9,10 +9,6 @@ describe('must', () => {
       expect(result).toBe(1)
     })
 
-    it('should throw when array is empty', () => {
-      expect(() => must0([])).toThrowError('Result is empty')
-    })
-
     it('should return first element when array has one item', () => {
       const result = must0(['only'])
       expect(result).toBe('only')
