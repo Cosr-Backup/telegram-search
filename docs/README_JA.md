@@ -30,9 +30,6 @@
   <a href="https://github.com/groupultra/telegram-search/actions/workflows/ci.yaml">
     <img alt="CI" src="https://github.com/groupultra/telegram-search/actions/workflows/ci.yaml/badge.svg" />
   </a>
-  <a href="https://app.netlify.com/sites/tgsearch/deploys">
-    <img alt="Netlify Status" src="https://api.netlify.com/api/v1/badges/89bfbfd2-0f73-41b0-8db4-4ab6b6512f6e/deploy-status" />
-  </a>
 </p>
 
 **強力なセマンティック検索で Telegram メッセージを簡単に検索・エクスポート。すべての言語と分かち書きなしの文に対応。**

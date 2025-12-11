@@ -30,9 +30,6 @@
   <a href="https://github.com/groupultra/telegram-search/actions/workflows/ci.yaml">
     <img alt="CI" src="https://github.com/groupultra/telegram-search/actions/workflows/ci.yaml/badge.svg" />
   </a>
-  <a href="https://app.netlify.com/sites/tgsearch/deploys">
-    <img alt="Netlify Status" src="https://api.netlify.com/api/v1/badges/89bfbfd2-0f73-41b0-8db4-4ab6b6512f6e/deploy-status" />
-  </a>
 </p>
 
 **轻松查找和导出您的 Telegram 消息，强大的语义搜索支持所有语言和无分词句子。**
