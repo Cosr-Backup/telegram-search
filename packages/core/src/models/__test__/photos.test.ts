@@ -55,12 +55,14 @@ describe('models/photos', () => {
         platformId: 'file-1',
         messageUUID,
         byte: firstBytes,
+        mimeType: 'image/jpeg',
       },
     ])
 
     const inserted = first
     expect(inserted).toHaveLength(1)
     expect(inserted[0].file_id).toBe('file-1')
+    expect(inserted[0].image_mime_type).toEqual('image/jpeg')
 
     const second = await recordPhotos(db, [
       {
@@ -68,6 +70,7 @@ describe('models/photos', () => {
         platformId: 'file-1',
         messageUUID,
         byte: secondBytes,
+        mimeType: 'image/bmp',
       },
     ])
 
@@ -77,6 +80,7 @@ describe('models/photos', () => {
     const [photo] = await db.select().from(photosTable)
     expect(photo.image_bytes).toBeInstanceOf(Uint8Array)
     expect((photo.image_bytes as Uint8Array).length).toBe(secondBytes.length)
+    expect(photo.image_mime_type).toEqual('image/bmp')
   })
 
   it('findPhotoByFileId and findPhotoByQueryId return the correct photo', async () => {
@@ -92,9 +96,11 @@ describe('models/photos', () => {
 
     const byFileId = (await findPhotoByFileId(db, 'file-42')).unwrap()
     expect(byFileId.id).toBe(inserted.id)
+    expect(byFileId.image_mime_type).toBe('image/jpeg')
 
     const byQueryId = (await findPhotoByQueryId(db, inserted.id)).unwrap()
     expect(byQueryId.id).toBe(inserted.id)
+    expect(byQueryId.image_mime_type).toBe('image/jpeg')
   })
 
   it('findPhotoByFileIdWithMimeType returns id and mimeType only', async () => {

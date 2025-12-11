@@ -28,6 +28,7 @@ describe('models/stickers', () => {
         platformId: 'file-1',
         emoji: '😀',
         byte: Buffer.from([1, 2, 3]),
+        mimeType: 'image/webp',
       },
       // Duplicate platformId should be ignored by deduplication filter
       {
@@ -35,12 +36,14 @@ describe('models/stickers', () => {
         platformId: 'file-1',
         emoji: '😅',
         byte: Buffer.from([9, 9]),
+        mimeType: 'image/webp',
       },
       // No bytes -> ignored by recordStickers
       {
         type: 'sticker',
         platformId: 'file-2',
         emoji: '🙃',
+        mimeType: 'image/webp',
       },
     ] as any)
 
@@ -48,6 +51,7 @@ describe('models/stickers', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].file_id).toBe('file-1')
     expect(rows[0].emoji).toBe('😀')
+    expect(rows[0].sticker_mime_type).toBe('image/webp')
   })
 
   it('recordStickers updates emoji and bytes on conflict', async () => {
@@ -59,6 +63,7 @@ describe('models/stickers', () => {
         platformId: 'file-1',
         emoji: '😀',
         byte: Buffer.from([1]),
+        mimeType: 'image/webp',
       },
     ] as any)
 
@@ -68,6 +73,7 @@ describe('models/stickers', () => {
         platformId: 'file-1',
         emoji: '🎉',
         byte: Buffer.from([1, 2, 3, 4]),
+        mimeType: 'image/webp',
       },
     ] as any)
 
@@ -76,6 +82,7 @@ describe('models/stickers', () => {
     expect(row.emoji).toBe('🎉')
     expect(row.sticker_bytes).toBeInstanceOf(Uint8Array)
     expect((row.sticker_bytes as Uint8Array).length).toBe(4)
+    expect(row.sticker_mime_type).toBe('image/webp')
   })
 
   it('findStickerByFileId, getStickerQueryIdByFileId, and findStickerByQueryId work together', async () => {
@@ -92,11 +99,14 @@ describe('models/stickers', () => {
 
     const byFileId = (await findStickerByFileId(db, 'file-123')).unwrap()
     expect(byFileId.id).toBe(inserted.id)
+    expect(byFileId.sticker_mime_type).toBe('image/webp')
 
     const queryId = (await getStickerQueryIdByFileIdWithMimeType(db, 'file-123')).unwrap()
     expect(queryId.id).toBe(inserted.id)
+    expect(queryId.mimeType).toBe('image/webp')
 
     const byQueryId = (await findStickerByQueryId(db, inserted.id)).unwrap()
     expect(byQueryId.id).toBe(inserted.id)
+    expect(byQueryId.sticker_mime_type).toBe('image/webp')
   })
 })
