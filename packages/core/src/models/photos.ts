@@ -5,64 +5,21 @@ import type { Buffer } from 'buffer'
 
 import type { CoreDB } from '../db'
 import type { CoreMessageMediaPhoto } from '../types/media'
-import type { DBInsertPhoto } from './utils/photos'
+import type { PromiseResult } from '../utils/result'
+import type { DBInsertPhoto, DBSelectPhoto } from './utils/types'
 
-import { Ok } from '@unbird/result'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 
-import { withDb } from '../db'
 import { photosTable } from '../schemas/photos'
+import { withResult } from '../utils/result'
 import { must0 } from './utils/must'
 
-export async function findPhotoByFileId(db: CoreDB, fileId: string) {
-  const photos = await db
-    .select()
-    .from(photosTable)
-    .where(
-      and(
-        eq(photosTable.platform, 'telegram'),
-        eq(photosTable.file_id, fileId),
-      ),
-    )
-    .limit(1)
-
-  return Ok(must0(photos))
-}
-
-export async function findPhotoByFileIdWithMimeType(db: CoreDB, fileId: string) {
-  const photo = await db
-    .select({
-      id: photosTable.id,
-      mimeType: photosTable.image_mime_type,
-    })
-    .from(photosTable)
-    .where(
-      and(
-        eq(photosTable.platform, 'telegram'),
-        eq(photosTable.file_id, fileId),
-      ),
-    )
-    .limit(1)
-
-  return Ok(must0(photo))
-}
-
-export async function findPhotoByQueryId(db: CoreDB, queryId: string) {
-  const photos = await db
-    .select()
-    .from(photosTable)
-    .where(eq(photosTable.id, queryId))
-
-  return Ok(must0(photos))
-}
-
-type PhotoMediaForRecord = CoreMessageMediaPhoto & {
-  byte?: Buffer
-}
-
-export async function recordPhotos(media: PhotoMediaForRecord[]) {
+/**
+ * Record photos for a specific account
+ */
+export async function recordPhotos(db: CoreDB, media: (CoreMessageMediaPhoto & { byte?: Buffer })[]): Promise<DBInsertPhoto[]> {
   if (media.length === 0) {
-    return
+    return []
   }
 
   const dataToInsert = media
@@ -77,10 +34,10 @@ export async function recordPhotos(media: PhotoMediaForRecord[]) {
     )
 
   if (dataToInsert.length === 0) {
-    return
+    return []
   }
 
-  return withDb(async db => db
+  return db
     .insert(photosTable)
     .values(dataToInsert)
     .onConflictDoUpdate({
@@ -90,20 +47,77 @@ export async function recordPhotos(media: PhotoMediaForRecord[]) {
         updated_at: Date.now(),
       },
     })
-    .returning(),
-  )
+    .returning()
 }
 
-export async function findPhotosByMessageId(messageUUID: string) {
-  return withDb(db => db
+/**
+ * Find a photo by file_id
+ */
+export async function findPhotoByFileId(db: CoreDB, fileId: string): PromiseResult<DBSelectPhoto> {
+  return withResult(async () => {
+    const photos = await db
+      .select()
+      .from(photosTable)
+      .where(
+        and(
+          eq(photosTable.platform, 'telegram'),
+          eq(photosTable.file_id, fileId),
+        ),
+      )
+      .limit(1)
+
+    return must0(photos)
+  })
+}
+
+/**
+ * Find a photo by file_id with mime_type
+ */
+export async function findPhotoByFileIdWithMimeType(db: CoreDB, fileId: string): PromiseResult<{ id: string, mimeType: string }> {
+  return withResult(async () => {
+    const photos = await db
+      .select({
+        id: photosTable.id,
+        mimeType: photosTable.image_mime_type,
+      })
+      .from(photosTable)
+      .where(
+        and(
+          eq(photosTable.platform, 'telegram'),
+          eq(photosTable.file_id, fileId),
+        ),
+      )
+      .limit(1)
+
+    return must0(photos)
+  })
+}
+
+/**
+ * Find a photo by query_id
+ */
+export async function findPhotoByQueryId(db: CoreDB, queryId: string): PromiseResult<DBSelectPhoto> {
+  return withResult(async () => {
+    const photos = await db
+      .select()
+      .from(photosTable)
+      .where(eq(photosTable.id, queryId))
+      .limit(1)
+
+    return must0(photos)
+  })
+}
+
+export async function findPhotosByMessageId(db: CoreDB, messageUUID: string): PromiseResult<DBSelectPhoto[]> {
+  return withResult(() => db
     .select()
     .from(photosTable)
     .where(eq(photosTable.message_id, messageUUID)),
   )
 }
 
-export async function findPhotosByMessageIds(messageUUIDs: string[]) {
-  return withDb(db => db
+export async function findPhotosByMessageIds(db: CoreDB, messageUUIDs: string[]): PromiseResult<DBSelectPhoto[]> {
+  return withResult(() => db
     .select()
     .from(photosTable)
     .where(inArray(photosTable.message_id, messageUUIDs)),

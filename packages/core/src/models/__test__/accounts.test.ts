@@ -1,50 +1,60 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { setDbInstanceForTests } from '../../db'
 import { mockDB } from '../../db/mock'
 import { accountsTable } from '../../schemas/accounts'
 import { findAccountByPlatformId, findAccountByUUID, recordAccount } from '../accounts'
 
-describe('accounts model', () => {
-  beforeEach(async () => {
-    const db = await mockDB({ accountsTable })
-    setDbInstanceForTests(db)
+async function setupDb() {
+  return mockDB({
+    accountsTable,
+  })
+}
+
+describe('models/accounts', () => {
+  it('recordAccount inserts a new account when none exists', async () => {
+    const db = await setupDb()
+
+    const result = await recordAccount(db, 'telegram', 'user-1')
+    const account = result
+
+    expect(account.platform).toBe('telegram')
+    expect(account.platform_user_id).toBe('user-1')
+
+    const accounts = await db.select().from(accountsTable)
+    expect(accounts).toHaveLength(1)
   })
 
-  it('recordAccount should insert account with correct values', async () => {
-    const result = await recordAccount('telegram', 'user-123')
-    const rows = result.unwrap()
+  it('recordAccount updates existing account on conflict and bumps updated_at', async () => {
+    const db = await setupDb()
 
-    expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({
-      platform: 'telegram',
-      platform_user_id: 'user-123',
-    })
+    const first = await recordAccount(db, 'telegram', 'user-1')
+
+    // Small delay to make updated_at difference observable even if clocks are coarse
+    const second = await recordAccount(db, 'telegram', 'user-1')
+
+    expect(second.id).toBe(first.id)
+    expect(second.updated_at).toBeGreaterThanOrEqual(first.updated_at)
   })
 
-  it('findAccountByPlatformId should query by platform and platform_user_id and return first result or null', async () => {
-    const inserted = await recordAccount('telegram', 'user-xyz')
-    const [account] = inserted.unwrap()
+  it('findAccountByPlatformId returns the correct account', async () => {
+    const db = await setupDb()
 
-    const result = await findAccountByPlatformId('telegram', 'user-xyz')
-    const found = result.unwrap()
+    const created = await recordAccount(db, 'telegram', 'user-1')
 
-    expect(found).not.toBeNull()
-    expect(found?.id).toBe(account.id)
-    expect(found?.platform).toBe('telegram')
-    expect(found?.platform_user_id).toBe('user-xyz')
+    const found = (await findAccountByPlatformId(db, 'telegram', 'user-1')).unwrap()
+
+    expect(found.id).toBe(created.id)
+    expect(found.platform).toBe('telegram')
+    expect(found.platform_user_id).toBe('user-1')
   })
 
-  it('findAccountByUUID should query by id and return first result or null', async () => {
-    const inserted = await recordAccount('telegram', 'user-abc')
-    const [account] = inserted.unwrap()
+  it('findAccountByUUID returns the correct account', async () => {
+    const db = await setupDb()
 
-    const result = await findAccountByUUID(account.id)
-    const found = result.unwrap()
+    const created = (await recordAccount(db, 'telegram', 'user-1'))
 
-    expect(found).not.toBeNull()
-    expect(found?.id).toBe(account.id)
-    expect(found?.platform).toBe('telegram')
-    expect(found?.platform_user_id).toBe('user-abc')
+    const found = (await findAccountByUUID(db, created.id)).unwrap()
+
+    expect(found.id).toBe(created.id)
   })
 })

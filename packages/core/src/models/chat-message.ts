@@ -7,28 +7,33 @@ import type { JoinedChatType } from '../schemas/joined-chats'
 import type { EmbeddingDimension } from '../types/account-settings'
 import type { StorageMessageContextParams } from '../types/events'
 import type { CoreMessage } from '../types/message'
+import type { PromiseResult } from '../utils/result'
 import type { DBRetrievalMessages } from './utils/message'
+import type { DBInsertMessage, DBSelectMessage } from './utils/types'
 
 import { useLogger } from '@guiiai/logg'
-import { Ok } from '@unbird/result'
 import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm'
 
-import { withDb } from '../db'
 import { chatMessagesTable } from '../schemas/chat-messages'
 import { joinedChatsTable } from '../schemas/joined-chats'
+import { withResult } from '../utils/result'
 import { findPhotosByMessageIds } from './photos'
 import { convertToCoreMessageFromDB, convertToDBInsertMessage } from './utils/message'
 import { convertDBPhotoToCoreMessageMedia } from './utils/photos'
 import { retrieveJieba } from './utils/retrieve-jieba'
 import { retrieveVector } from './utils/retrieve-vector'
 
-async function upsertMessagesForAccount(
+/**
+ * Upsert messages for a specific account.
+ * NOTE: Without result wrapper, because it's insert operation, maybe outer don't receive any error, just throw error directly.
+ */
+export async function recordMessages(
   tx: CoreTransaction | CoreDB,
   accountId: string,
   messages: CoreMessage[],
-) {
+): Promise<DBInsertMessage[]> {
   if (messages.length === 0) {
-    return
+    return []
   }
 
   // Resolve chat types in batch so we can decide whether to scope messages
@@ -55,9 +60,9 @@ async function upsertMessagesForAccount(
   })
 
   if (dbMessages.length === 0)
-    return
+    return []
 
-  return tx
+  const rows = await tx
     .insert(chatMessagesTable)
     .values(dbMessages)
     .onConflictDoUpdate({
@@ -96,153 +101,177 @@ async function upsertMessagesForAccount(
       },
     })
     .returning()
+
+  return rows
 }
 
-export async function recordMessages(accountId: string, messages: CoreMessage[]) {
-  return withDb(db => upsertMessagesForAccount(db, accountId, messages))
-}
-
-export async function fetchMessages(accountId: string, chatId: string, pagination: CorePagination) {
-  const dbMessagesResults = (await withDb(db => db
-    .select({
-      chat_messages: chatMessagesTable,
-      joined_chats: joinedChatsTable,
-    })
-    .from(chatMessagesTable)
-    .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
-    .where(and(
-      eq(chatMessagesTable.in_chat_id, chatId),
-      // ACL: for private dialogs, only return messages owned by this account (or legacy NULL owner).
-      sql`(
+/**
+ * Fetch messages for a specific account.
+ */
+export async function fetchMessages(
+  db: CoreDB,
+  accountId: string,
+  chatId: string,
+  pagination: CorePagination,
+): PromiseResult<{ dbMessagesResults: DBSelectMessage[], coreMessages: CoreMessage[] }> {
+  return withResult(async () => {
+    const dbMessagesResults = await db
+      .select({
+        chat_messages: chatMessagesTable,
+        joined_chats: joinedChatsTable,
+      })
+      .from(chatMessagesTable)
+      .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
+      .where(and(
+        eq(chatMessagesTable.in_chat_id, chatId),
+        // ACL: for private dialogs, only return messages owned by this account (or legacy NULL owner).
+        sql`(
         ${joinedChatsTable.chat_type} != 'user'
         OR ${chatMessagesTable.owner_account_id} = ${accountId}
         OR ${chatMessagesTable.owner_account_id} IS NULL
       )`,
-    ))
-    .orderBy(desc(chatMessagesTable.created_at))
-    .limit(pagination.limit)
-    .offset(pagination.offset),
-  )).expect('Failed to fetch messages')
+      ))
+      .orderBy(desc(chatMessagesTable.created_at))
+      .limit(pagination.limit)
+      .offset(pagination.offset)
 
-  return Ok({
-    dbMessagesResults: dbMessagesResults.map(row => row.chat_messages),
-    coreMessages: dbMessagesResults.map(row => convertToCoreMessageFromDB(row.chat_messages)),
+    return {
+      dbMessagesResults: dbMessagesResults.map(row => row.chat_messages),
+      coreMessages: dbMessagesResults.map(row => convertToCoreMessageFromDB(row.chat_messages)),
+    }
   })
 }
 
-export async function fetchMessagesWithPhotos(accountId: string, chatId: string, pagination: CorePagination) {
-  const { dbMessagesResults, coreMessages } = (await fetchMessages(accountId, chatId, pagination)).unwrap()
+/**
+ * Fetch messages with photos for a specific account.
+ */
+export async function fetchMessagesWithPhotos(
+  db: CoreDB,
+  accountId: string,
+  chatId: string,
+  pagination: CorePagination,
+): PromiseResult<CoreMessage[]> {
+  return withResult(async () => {
+    const { dbMessagesResults, coreMessages } = (await fetchMessages(db, accountId, chatId, pagination)).expect('Failed to fetch messages')
 
-  // Fetch photos for all messages in batch
-  const messageIds = dbMessagesResults.map(msg => msg.id)
-  const photos = (await findPhotosByMessageIds(messageIds)).unwrap()
+    // Fetch photos for all messages in batch
+    const messageIds = dbMessagesResults.map(msg => msg.id)
+    const photos = (await findPhotosByMessageIds(db, messageIds)).expect('Failed to fetch photos')
 
-  // Group photos by message_id
-  const photosByMessage = Object.groupBy(
-    photos.filter(photo => photo.message_id),
-    photo => photo.message_id!,
-  )
+    // Group photos by message_id
+    const photosByMessage = Object.groupBy(
+      photos.filter(photo => photo.message_id),
+      photo => photo.message_id!,
+    )
 
-  // Attach photos to messages with proper type conversion
-  return Ok(coreMessages.map((message, index) => ({
-    ...message,
-    media: (photosByMessage[dbMessagesResults[index].id] || [])
-      .map(convertDBPhotoToCoreMessageMedia),
-  }) satisfies CoreMessage))
+    // Attach photos to messages with proper type conversion
+    return coreMessages.map((message, index) => ({
+      ...message,
+      media: (photosByMessage[dbMessagesResults[index].id] || [])
+        .map(convertDBPhotoToCoreMessageMedia),
+    }) satisfies CoreMessage)
+  })
 }
 
+/**
+ * Fetch message context with photos for a specific account.
+ */
 export async function fetchMessageContextWithPhotos(
+  db: CoreDB,
   accountId: string,
   { chatId, messageId, before, after }: Required<StorageMessageContextParams>,
-) {
-  const targetMessages = (await withDb(db => db
-    .select({
-      chat_messages: chatMessagesTable,
-      joined_chats: joinedChatsTable,
-    })
-    .from(chatMessagesTable)
-    .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
-    .where(and(
-      eq(chatMessagesTable.in_chat_id, chatId),
-      eq(chatMessagesTable.platform_message_id, messageId),
-      sql`(
+): PromiseResult<CoreMessage[]> {
+  return withResult(async () => {
+    const targetMessages = await db
+      .select({
+        chat_messages: chatMessagesTable,
+        joined_chats: joinedChatsTable,
+      })
+      .from(chatMessagesTable)
+      .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
+      .where(and(
+        eq(chatMessagesTable.in_chat_id, chatId),
+        eq(chatMessagesTable.platform_message_id, messageId),
+        sql`(
         ${joinedChatsTable.chat_type} != 'user'
         OR ${chatMessagesTable.owner_account_id} = ${accountId}
         OR ${chatMessagesTable.owner_account_id} IS NULL
       )`,
-    ))
-    .limit(1),
-  )).expect('Failed to locate target message')
+      ))
+      .limit(1)
 
-  if (targetMessages.length === 0)
-    return Ok<CoreMessage[]>([])
+    if (targetMessages.length === 0)
+      return []
 
-  const targetMessage = targetMessages[0].chat_messages
+    const targetMessage = targetMessages[0].chat_messages
 
-  const previousMessages = (await withDb(db => db
-    .select({
-      chat_messages: chatMessagesTable,
-      joined_chats: joinedChatsTable,
-    })
-    .from(chatMessagesTable)
-    .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
-    .where(and(
-      eq(chatMessagesTable.in_chat_id, chatId),
-      lt(chatMessagesTable.platform_timestamp, targetMessage.platform_timestamp),
-      sql`(
+    const previousMessages = await db
+      .select({
+        chat_messages: chatMessagesTable,
+        joined_chats: joinedChatsTable,
+      })
+      .from(chatMessagesTable)
+      .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
+      .where(and(
+        eq(chatMessagesTable.in_chat_id, chatId),
+        lt(chatMessagesTable.platform_timestamp, targetMessage.platform_timestamp),
+        sql`(
         ${joinedChatsTable.chat_type} != 'user'
         OR ${chatMessagesTable.owner_account_id} = ${accountId}
         OR ${chatMessagesTable.owner_account_id} IS NULL
       )`,
-    ))
-    .orderBy(desc(chatMessagesTable.platform_timestamp))
-    .limit(before),
-  )).expect('Failed to fetch previous messages')
+      ))
+      .orderBy(desc(chatMessagesTable.platform_timestamp))
+      .limit(before)
 
-  const nextMessages = (await withDb(db => db
-    .select({
-      chat_messages: chatMessagesTable,
-      joined_chats: joinedChatsTable,
-    })
-    .from(chatMessagesTable)
-    .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
-    .where(and(
-      eq(chatMessagesTable.in_chat_id, chatId),
-      gt(chatMessagesTable.platform_timestamp, targetMessage.platform_timestamp),
-      sql`(
+    const nextMessages = await db
+      .select({
+        chat_messages: chatMessagesTable,
+        joined_chats: joinedChatsTable,
+      })
+      .from(chatMessagesTable)
+      .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
+      .where(and(
+        eq(chatMessagesTable.in_chat_id, chatId),
+        gt(chatMessagesTable.platform_timestamp, targetMessage.platform_timestamp),
+        sql`(
         ${joinedChatsTable.chat_type} != 'user'
         OR ${chatMessagesTable.owner_account_id} = ${accountId}
         OR ${chatMessagesTable.owner_account_id} IS NULL
       )`,
-    ))
-    .orderBy(asc(chatMessagesTable.platform_timestamp))
-    .limit(after),
-  )).expect('Failed to fetch next messages')
+      ))
+      .orderBy(asc(chatMessagesTable.platform_timestamp))
+      .limit(after)
 
-  const combinedDbMessages = [
-    ...previousMessages.map(row => row.chat_messages).reverse(),
-    targetMessage,
-    ...nextMessages.map(row => row.chat_messages),
-  ]
+    const combinedDbMessages = [
+      ...previousMessages.map(row => row.chat_messages).reverse(),
+      targetMessage,
+      ...nextMessages.map(row => row.chat_messages),
+    ]
 
-  if (combinedDbMessages.length === 0)
-    return Ok<CoreMessage[]>([])
+    if (combinedDbMessages.length === 0)
+      return []
 
-  const messageIds = combinedDbMessages.map(msg => msg.id)
-  const photos = (await findPhotosByMessageIds(messageIds)).unwrap()
-  const photosByMessage = Object.groupBy(
-    photos.filter(photo => photo.message_id),
-    photo => photo.message_id!,
-  )
+    const messageIds = combinedDbMessages.map(msg => msg.id)
+    const photos = (await findPhotosByMessageIds(db, messageIds)).expect('Failed to fetch photos')
+    const photosByMessage = Object.groupBy(
+      photos.filter(photo => photo.message_id),
+      photo => photo.message_id!,
+    )
 
-  return Ok(combinedDbMessages.map(message => ({
-    ...convertToCoreMessageFromDB(message),
-    media: (photosByMessage[message.id] || [])
-      .map(convertDBPhotoToCoreMessageMedia),
-  }) satisfies CoreMessage))
+    return combinedDbMessages.map(message => ({
+      ...convertToCoreMessageFromDB(message),
+      media: (photosByMessage[message.id] || [])
+        .map(convertDBPhotoToCoreMessageMedia),
+    }) satisfies CoreMessage)
+  })
 }
 
+/**
+ * Retrieve messages for a specific account.
+ */
 export async function retrieveMessages(
+  db: CoreDB,
   accountId: string,
   chatId: string | undefined,
   embeddingDimension: EmbeddingDimension,
@@ -255,22 +284,24 @@ export async function retrieveMessages(
     fromUserId?: string
     timeRange?: { start?: number, end?: number }
   },
-) {
-  const logger = useLogger('models:chat-message:retrieveMessages')
+): PromiseResult<DBRetrievalMessages[]> {
+  return withResult(async () => {
+    const logger = useLogger('models:chat-message:retrieveMessages')
 
-  const retrievalMessages: DBRetrievalMessages[] = []
+    const retrievalMessages: DBRetrievalMessages[] = []
 
-  if (content.text) {
-    const relevantMessages = await retrieveJieba(accountId, chatId, content.text, pagination, filters)
-    logger.withFields({ relevantMessages: relevantMessages.length }).verbose('Retrieved jieba messages')
-    retrievalMessages.push(...relevantMessages)
-  }
+    if (content.text) {
+      const relevantMessages = await retrieveJieba(db, accountId, chatId, content.text, pagination, filters)
+      logger.withFields({ relevantMessages: relevantMessages.length }).verbose('Retrieved jieba messages')
+      retrievalMessages.push(...relevantMessages)
+    }
 
-  if (content.embedding && content.embedding.length !== 0) {
-    const relevantMessages = await retrieveVector(accountId, chatId, content.embedding, embeddingDimension, pagination, filters)
-    logger.withFields({ relevantMessages: relevantMessages.length }).verbose('Retrieved vector messages')
-    retrievalMessages.push(...relevantMessages)
-  }
+    if (content.embedding && content.embedding.length !== 0) {
+      const relevantMessages = await retrieveVector(db, accountId, chatId, content.embedding, embeddingDimension, pagination, filters)
+      logger.withFields({ relevantMessages: relevantMessages.length }).verbose('Retrieved vector messages')
+      retrievalMessages.push(...relevantMessages)
+    }
 
-  return Ok(retrievalMessages)
+    return retrievalMessages
+  })
 }

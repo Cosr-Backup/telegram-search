@@ -1,57 +1,58 @@
-import type { Result } from '@unbird/result'
-
+import type { CoreDB } from '../db'
 import type { AccountSettings } from '../types/account-settings'
+import type { PromiseResult } from '../utils/result'
+import type { DBInsertAccount } from './utils/types'
 
-import { Err, Ok } from '@unbird/result'
 import { eq } from 'drizzle-orm'
 import { safeParse } from 'valibot'
 
-import { withDb } from '../db'
 import { accountsTable } from '../schemas/accounts'
 import { accountSettingsSchema } from '../types/account-settings'
 import { generateDefaultAccountSettings } from '../utils/account-settings'
-
-/**
- * Fetch settings by accountId
- */
-export async function fetchSettingsByAccountId(accountId: string): Promise<Result<AccountSettings>> {
-  const result = (await withDb(async db => await db
-    .select({ settings: accountsTable.settings })
-    .from(accountsTable)
-    .where(eq(accountsTable.id, accountId))
-    .limit(1),
-  )).expect('Failed to fetch account settings')
-
-  if (result.length > 0 && result[0].settings) {
-    const parsedSettings = safeParse(accountSettingsSchema, result[0].settings)
-    if (parsedSettings.success) {
-      return Ok(parsedSettings.output)
-    }
-  }
-
-  return Ok(generateDefaultAccountSettings())
-}
+import { withResult } from '../utils/result'
+import { must0 } from './utils/must'
 
 /**
  * Update settings for a specific account
  */
 export async function updateAccountSettings(
+  db: CoreDB,
   accountId: string,
   settings: Partial<AccountSettings>,
-) {
+): Promise<DBInsertAccount> {
   const parsedSettings = safeParse(accountSettingsSchema, settings)
   if (!parsedSettings.success) {
-    return Err('Invalid settings')
+    throw new Error('Invalid settings', { cause: parsedSettings.issues })
   }
 
-  return (await withDb(async (db) => {
-    // Only update the "settings" column (which is a JSONB), not the root row fields
-    const updatedRows = await db
-      .update(accountsTable)
-      .set({ settings: parsedSettings.output })
-      .where(eq(accountsTable.id, accountId))
-      .returning()
+  // Only update the "settings" column (which is a JSONB), not the root row fields
+  const updatedRows = await db
+    .update(accountsTable)
+    .set({ settings: parsedSettings.output })
+    .where(eq(accountsTable.id, accountId))
+    .returning()
 
-    return updatedRows.length > 0 ? Ok(updatedRows[0]) : Err('Failed to update account settings')
-  })).expect('Failed to update account settings')
+  return must0(updatedRows)
+}
+
+/**
+ * Fetch settings by accountId
+ */
+export async function fetchSettingsByAccountId(db: CoreDB, accountId: string): PromiseResult<AccountSettings> {
+  return withResult(async () => {
+    const result = await db
+      .select({ settings: accountsTable.settings })
+      .from(accountsTable)
+      .where(eq(accountsTable.id, accountId))
+      .limit(1)
+
+    if (result.length > 0 && result[0].settings) {
+      const parsedSettings = safeParse(accountSettingsSchema, result[0].settings)
+      if (parsedSettings.success) {
+        return parsedSettings.output
+      }
+    }
+
+    return generateDefaultAccountSettings()
+  })
 }

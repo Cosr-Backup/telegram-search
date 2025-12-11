@@ -1,39 +1,40 @@
+import type { CoreDB } from '../db'
+import type { PromiseResult } from '../utils/result'
+import type { DBSelectAccount } from './utils/types'
+
 import { and, eq } from 'drizzle-orm'
 
-import { withDb } from '../db'
 import { accountsTable } from '../schemas/accounts'
-
-export type DBInsertAccount = typeof accountsTable.$inferInsert
-export type DBSelectAccount = typeof accountsTable.$inferSelect
+import { withResult } from '../utils/result'
+import { must0 } from './utils/must'
 
 /**
  * Record or update an account in the database
  */
-export async function recordAccount(platform: string, platformUserId: string) {
-  const dbAccount: DBInsertAccount = {
-    platform,
-    platform_user_id: platformUserId,
-  }
-
-  return withDb(async db => db
+export async function recordAccount(db: CoreDB, platform: string, platformUserId: string): Promise<DBSelectAccount> {
+  const rows = await db
     .insert(accountsTable)
-    .values(dbAccount)
+    .values({
+      platform,
+      platform_user_id: platformUserId,
+    })
     .onConflictDoUpdate({
       target: [accountsTable.platform, accountsTable.platform_user_id],
       set: {
         updated_at: Date.now(),
       },
     })
-    .returning(),
-  )
+    .returning()
+
+  return must0(rows)
 }
 
 /**
  * Find an account by platform and platform_user_id
  */
-export async function findAccountByPlatformId(platform: string, platformUserId: string) {
-  return withDb(async (db) => {
-    const results = await db
+export async function findAccountByPlatformId(db: CoreDB, platform: string, platformUserId: string): PromiseResult<DBSelectAccount> {
+  return withResult(async () => {
+    const rows = await db
       .select()
       .from(accountsTable)
       .where(and(
@@ -41,22 +42,21 @@ export async function findAccountByPlatformId(platform: string, platformUserId: 
         eq(accountsTable.platform_user_id, platformUserId),
       ))
       .limit(1)
-
-    return results.length > 0 ? results[0] : null
+    return must0(rows)
   })
 }
 
 /**
  * Find an account by UUID
  */
-export async function findAccountByUUID(uuid: string) {
-  return withDb(async (db) => {
-    const results = await db
+export async function findAccountByUUID(db: CoreDB, uuid: string): PromiseResult<DBSelectAccount> {
+  return withResult(async () => {
+    const rows = await db
       .select()
       .from(accountsTable)
       .where(eq(accountsTable.id, uuid))
       .limit(1)
 
-    return results[0] || null
+    return must0(rows)
   })
 }

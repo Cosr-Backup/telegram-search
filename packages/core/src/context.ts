@@ -7,6 +7,7 @@ import type { CoreEmitter, CoreEvent, FromCoreEvent, ToCoreEvent } from './types
 import { useLogger } from '@guiiai/logg'
 import { EventEmitter } from 'eventemitter3'
 
+import { useDrizzle } from './db'
 import { fetchSettingsByAccountId, updateAccountSettings } from './models/account-settings'
 import { detectMemoryLeak } from './utils/memory-leak-detector'
 
@@ -83,7 +84,7 @@ export function createCoreContext(metrics?: CoreMetrics): CoreContext {
           return await listener(...args)
         }
         catch (error) {
-          useLogger().withError(error).error('Failed to handle core event')
+          useLogger().withError(error instanceof Error ? (error.cause ?? error) : error).error('Failed to handle core event')
         }
       })
 
@@ -140,11 +141,11 @@ export function createCoreContext(metrics?: CoreMetrics): CoreContext {
   }
 
   async function getAccountSettings(): Promise<AccountSettings> {
-    return (await fetchSettingsByAccountId(getCurrentAccountId())).expect('Failed to fetch account settings')
+    return (await fetchSettingsByAccountId(useDrizzle(), getCurrentAccountId())).expect('Failed to fetch account settings')
   }
 
   async function setAccountSettings(newSettings: AccountSettings) {
-    return (await updateAccountSettings(getCurrentAccountId(), newSettings)).expect('Failed to update account settings')
+    await updateAccountSettings(useDrizzle(), getCurrentAccountId(), newSettings)
   }
 
   // Setup memory leak detection and get cleanup function
