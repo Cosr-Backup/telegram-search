@@ -37,7 +37,7 @@ jobs:
 
       - name: Build
         run: |
-          pnpm run web:build
+          pnpm run build
         env:
           VITE_TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
           VITE_TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
