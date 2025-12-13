@@ -29,6 +29,8 @@ interface AvatarCacheEntry {
  */
 const __avatarHelperSingleton = new WeakMap<CoreContext, ReturnType<typeof createAvatarHelper>>()
 
+type AvatarEntity = Api.User | Api.Chat | Api.Channel
+
 /**
  * Create shared avatar helper bound to a CoreContext.
  * Encapsulates caches and in-flight deduplication for users and dialogs.
@@ -40,7 +42,7 @@ function createAvatarHelper(ctx: CoreContext) {
   // Use tiny-lru to implement LRU cache with automatic expiration and eviction
   const userAvatarCache = lru<AvatarCacheEntry>(MAX_AVATAR_CACHE_SIZE, AVATAR_CACHE_TTL)
   const chatAvatarCache = lru<AvatarCacheEntry>(MAX_AVATAR_CACHE_SIZE, AVATAR_CACHE_TTL)
-  const dialogEntityCache = lru<Api.User | Api.Chat | Api.Channel>(MAX_AVATAR_CACHE_SIZE, AVATAR_CACHE_TTL)
+  const dialogEntityCache = lru<AvatarEntity>(MAX_AVATAR_CACHE_SIZE, AVATAR_CACHE_TTL)
   // Negative caches (sentinels): record entities known to have no avatar
   const noUserAvatarCache = lru<boolean>(MAX_AVATAR_CACHE_SIZE, AVATAR_CACHE_TTL)
   const noChatAvatarCache = lru<boolean>(MAX_AVATAR_CACHE_SIZE, AVATAR_CACHE_TTL)
@@ -112,7 +114,7 @@ function createAvatarHelper(ctx: CoreContext) {
    * Resolve avatar fileId for a Telegram entity.
    * Returns undefined if no photo is present.
    */
-  function resolveAvatarFileId(entity: Api.User | Api.Chat | Api.Channel | undefined): string | undefined {
+  function resolveAvatarFileId(entity: AvatarEntity | undefined): string | undefined {
     try {
       if (!entity)
         return undefined
@@ -133,7 +135,7 @@ function createAvatarHelper(ctx: CoreContext) {
    * Falls back to `downloadMedia` when `downloadProfilePhoto` fails.
    * Use queue to control concurrency
    */
-  async function downloadSmallAvatar(entity: Api.User | Api.Chat | Api.Channel): Promise<Buffer | undefined> {
+  async function downloadSmallAvatar(entity: AvatarEntity): Promise<Buffer | undefined> {
     return downloadQueue.add(async () => {
       let buffer: Buffer | Uint8Array | undefined
       try {
@@ -200,7 +202,7 @@ function createAvatarHelper(ctx: CoreContext) {
   async function fetchAvatarCore(
     kind: 'user' | 'chat',
     idRaw: string | number,
-    opts: { expectedFileId?: string, entityOverride?: Api.User | Api.Chat | Api.Channel } = {},
+    opts: { expectedFileId?: string, entityOverride?: AvatarEntity } = {},
   ): Promise<void> {
     const isUser = kind === 'user'
     const idLabel = isUser ? 'userId' : 'chatId'
@@ -236,14 +238,14 @@ function createAvatarHelper(ctx: CoreContext) {
         logger.withFields({ userId: key }).verbose('No expectedFileId provided for early cache validation')
       }
 
-      let entity: Api.User | Api.Chat | Api.Channel | undefined
+      let entity: AvatarEntity | undefined
       if (isUser) {
         entity = await getClient().getEntity(String(idRaw)) as Api.User
       }
       else {
         entity = opts.entityOverride ?? dialogEntityCache.get(key)
         if (!entity) {
-          entity = await getClient().getEntity(String(idRaw)) as Api.User | Api.Chat | Api.Channel
+          entity = await getClient().getEntity(String(idRaw)) as AvatarEntity
           try {
             if (entity && (entity as any).id)
 
@@ -322,7 +324,7 @@ function createAvatarHelper(ctx: CoreContext) {
     await fetchAvatarCore('user', userId, { expectedFileId })
   }
 
-  async function fetchDialogAvatar(chatId: string | number, opts: { entityOverride?: Api.User | Api.Chat | Api.Channel } = {}): Promise<void> {
+  async function fetchDialogAvatar(chatId: string | number, opts: { entityOverride?: AvatarEntity } = {}): Promise<void> {
     await fetchAvatarCore('chat', chatId, { entityOverride: opts.entityOverride })
   }
 
@@ -386,13 +388,13 @@ function createAvatarHelper(ctx: CoreContext) {
           return
         }
 
-        const fileId = resolveAvatarFileId(dialog.entity as Api.User | Api.Chat | Api.Channel)
+        const fileId = resolveAvatarFileId(dialog.entity as AvatarEntity)
         const cached = chatAvatarCache.get(key)
         if (cached && cached.byte && cached.mimeType && ((fileId && cached.fileId === fileId) || !fileId))
           return
 
         // Delegates concurrency via global downloadQueue, with fileId-level dedup
-        const result = await getAvatarBytes(fileId, () => downloadSmallAvatar(dialog.entity as Api.User | Api.Chat | Api.Channel))
+        const result = await getAvatarBytes(fileId, () => downloadSmallAvatar(dialog.entity as AvatarEntity))
         if (!result) {
           if (!fileId) {
             noChatAvatarCache.set(key, true)

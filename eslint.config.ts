@@ -1,10 +1,10 @@
 import { defineConfig } from '@moeru/eslint-config'
 
-export default defineConfig({
+const config = defineConfig({
   masknet: false,
   preferArrow: false,
   perfectionist: false,
-  sonarjs: false,
+  sonarjs: true,
   sortPackageJsonScripts: false,
   typescript: true,
   unocss: true,
@@ -20,8 +20,6 @@ export default defineConfig({
 }, {
   rules: {
     'antfu/import-dedupe': 'error',
-    // TODO: remove this
-    'depend/ban-dependencies': 'warn',
     'import/order': 'off',
     'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
     'perfectionist/sort-imports': [
@@ -51,12 +49,16 @@ export default defineConfig({
         newlinesBetween: 'always',
       },
     ],
-    // 'sonarjs/cognitive-complexity': 'off',
+    'sonarjs/no-dead-store': 'off',
+    'sonarjs/cognitive-complexity': 'off',
     // 'sonarjs/no-commented-code': 'off',
     // 'sonarjs/pseudo-random': 'off',
+    'sonarjs/todo-tag': 'off',
     'style/padding-line-between-statements': 'error',
     'vue/prefer-separate-static-class': 'off',
     'yaml/plain-scalar': 'off',
     // '@typescript-eslint/no-explicit-any': 'warn',
   },
 })
+
+export default config

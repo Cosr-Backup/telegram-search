@@ -14,7 +14,6 @@ const getHueFrom = (color?: string) => color ? convert(color)?.h : DEFAULT_THEME
 export type ChatGroup = DialogType | ''
 
 export const useSettingsStore = defineStore('settings', () => {
-  const disableSettings = ref(import.meta.env.VITE_DISABLE_SETTINGS === 'true')
   const debugMode = ref(import.meta.env.VITE_DEBUG === 'true')
   const selectedGroup = useLocalStorage<ChatGroup>('settings/group-selected', 'user')
   const useCachedMessage = useLocalStorage<boolean>('settings/use-cached-message-v2', true)
@@ -68,7 +67,6 @@ export const useSettingsStore = defineStore('settings', () => {
 
   return {
     init,
-    disableSettings,
     theme,
     themeColorsHue,
     themeColorsHueDynamic,

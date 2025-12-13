@@ -80,6 +80,7 @@ export function createCoreContext(options: {
   const wrapEmitterOn = (emitter: CoreEmitter, fn?: (event: keyof ToCoreEvent) => void) => {
     const _on = emitter.on.bind(emitter)
 
+    // eslint-disable-next-line sonarjs/no-invariant-returns
     emitter.on = (event, listener) => {
       const onFn = _on(event, async (...args) => {
         try {
