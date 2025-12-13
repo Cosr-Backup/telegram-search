@@ -1,6 +1,7 @@
 // eslint-disable-next-line unicorn/prefer-node-protocol
 import { Buffer } from 'buffer'
 
+import { v4 as uuidv4 } from 'uuid'
 import { describe, expect, it } from 'vitest'
 
 import { mockDB } from '../../db/mock'
@@ -24,6 +25,7 @@ describe('models/stickers', () => {
 
     await recordStickers(db, [
       {
+        uuid: uuidv4(),
         type: 'sticker',
         platformId: 'file-1',
         emoji: '😀',
@@ -32,6 +34,7 @@ describe('models/stickers', () => {
       },
       // Duplicate platformId should be ignored by deduplication filter
       {
+        uuid: uuidv4(),
         type: 'sticker',
         platformId: 'file-1',
         emoji: '😅',
@@ -40,12 +43,13 @@ describe('models/stickers', () => {
       },
       // No bytes -> ignored by recordStickers
       {
+        uuid: uuidv4(),
         type: 'sticker',
         platformId: 'file-2',
         emoji: '🙃',
         mimeType: 'image/webp',
       },
-    ] as any)
+    ])
 
     const rows = await db.select().from(stickersTable)
     expect(rows).toHaveLength(1)
@@ -54,28 +58,69 @@ describe('models/stickers', () => {
     expect(rows[0].sticker_mime_type).toBe('image/webp')
   })
 
+  it('recordStickers can persist external storage path without raw bytes and clears bytes on conflict', async () => {
+    const db = await setupDb()
+
+    // Initial insert with inline bytes only.
+    await recordStickers(db, [
+      {
+        uuid: uuidv4(),
+        type: 'sticker',
+        platformId: 'file-external',
+        emoji: '😀',
+        byte: Buffer.from([1, 2, 3]),
+        mimeType: 'image/webp',
+      },
+    ])
+
+    let [row] = await db.select().from(stickersTable)
+    expect(row.sticker_bytes).toBeInstanceOf(Uint8Array)
+    // Default path is an empty string when no external storage is used.
+    expect(row.sticker_path).toBe('')
+
+    // Second insert switches to external storage only (no inline bytes).
+    await recordStickers(db, [
+      {
+        uuid: uuidv4(),
+        type: 'sticker',
+        platformId: 'file-external',
+        emoji: '😀',
+        storagePath: 'sticker/file-external',
+        mimeType: 'image/webp',
+      },
+    ])
+
+    ;[row] = await db.select().from(stickersTable)
+
+    expect(row.sticker_bytes).toBeNull()
+    expect(row.sticker_path).toBe('sticker/file-external')
+    expect(row.sticker_mime_type).toBe('image/webp')
+  })
+
   it('recordStickers updates emoji and bytes on conflict', async () => {
     const db = await setupDb()
 
     await recordStickers(db, [
       {
+        uuid: uuidv4(),
         type: 'sticker',
         platformId: 'file-1',
         emoji: '😀',
         byte: Buffer.from([1]),
         mimeType: 'image/webp',
       },
-    ] as any)
+    ])
 
     await recordStickers(db, [
       {
+        uuid: uuidv4(),
         type: 'sticker',
         platformId: 'file-1',
         emoji: '🎉',
         byte: Buffer.from([1, 2, 3, 4]),
         mimeType: 'image/webp',
       },
-    ] as any)
+    ])
 
     const [row] = await db.select().from(stickersTable)
 
