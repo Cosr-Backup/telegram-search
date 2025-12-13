@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { deepClone } from './deep-clone'
+import { deepClone } from '../deep-clone'
 
 describe('deepClone', () => {
   it('returns undefined when input is undefined', () => {

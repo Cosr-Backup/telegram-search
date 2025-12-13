@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { usePagination } from './pagination'
+import { usePagination } from '../pagination'
 
 describe('pagination', () => {
   describe('usePagination', () => {

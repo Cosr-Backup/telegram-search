@@ -2,8 +2,8 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { SocksType } from './config-schema'
-import { parseProxyUrl, proxyConfigToUrl } from './proxy-url-parser'
+import { SocksType } from '../config-schema'
+import { parseProxyUrl, proxyConfigToUrl } from '../proxy-url-parser'
 
 describe('proxyUrl Parser', () => {
   describe('parseProxyUrl', () => {

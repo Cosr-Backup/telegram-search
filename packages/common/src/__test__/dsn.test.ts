@@ -1,9 +1,9 @@
-import type { DatabaseConfig } from './config-schema'
+import type { DatabaseConfig } from '../config-schema'
 
 import { describe, expect, it } from 'vitest'
 
-import { DatabaseType } from './config-schema'
-import { getDatabaseDSN } from './dsn'
+import { DatabaseType } from '../config-schema'
+import { getDatabaseDSN } from '../dsn'
 
 describe('getDatabaseDSN', () => {
   it('returns the provided url when available', () => {

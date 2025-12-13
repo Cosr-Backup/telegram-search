@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { must0 } from './must'
+import { must0 } from '../must'
 
 describe('must', () => {
   describe('must0', () => {

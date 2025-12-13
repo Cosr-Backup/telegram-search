@@ -1,10 +1,10 @@
-import type { DBSelectPhoto } from './types'
+import type { DBSelectPhoto } from '../types'
 
 import { Buffer } from 'node:buffer'
 
 import { describe, expect, it } from 'vitest'
 
-import { convertDBPhotoToCoreMessageMedia } from './photos'
+import { convertDBPhotoToCoreMessageMedia } from '../photos'
 
 describe('photos', () => {
   describe('convertDBPhotoToCoreMessageMedia', () => {

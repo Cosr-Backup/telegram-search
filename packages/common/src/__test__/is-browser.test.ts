@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isBrowser } from './is-browser'
+import { isBrowser } from '../is-browser'
 
 describe('is-browser', () => {
   describe('isBrowser', () => {
