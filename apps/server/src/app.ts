@@ -68,7 +68,7 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
     return Response.json({ success: true })
   }))
 
-  collectDefaultMetrics()
+  collectDefaultMetrics({ prefix: 'telegram_search_' })
   app.get('/metrics', defineEventHandler(async () => {
     const metrics = await register.metrics()
     return new Response(metrics, {
@@ -76,6 +76,8 @@ function configureServer(logger: ReturnType<typeof useLogger>, flags: RuntimeFla
       headers: { 'Content-Type': register.contentType },
     })
   }))
+
+  logger.withFields({ endpoint: '/metrics' }).log('Metrics endpoint mounted')
 
   app.mount('/v1', v1api(getDB(), models, getMinioMediaStorage()))
 
