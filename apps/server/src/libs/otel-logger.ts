@@ -111,12 +111,12 @@ export async function shutdownOtelLogger(): Promise<void> {
  * Helper to emit a log to OpenTelemetry
  * This can be called manually from your code when you want to send logs to OTEL
  */
-export function emitOtelLog(level: string, message: string, attributes?: Record<string, string | number | boolean>): void {
+export function emitOtelLog(level: string, context: string, message: string, attributes?: Record<string, string | number | boolean>): void {
   if (!isInitialized) {
     return
   }
 
-  const otelLogger = logs.getLogger('telegram-search')
+  const otelLogger = logs.getLogger(context)
 
   // Map log level to OpenTelemetry severity
   const getSeverity = (level: string): SeverityNumber => {

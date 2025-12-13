@@ -1,5 +1,5 @@
 import type { Log } from '@guiiai/logg'
-import type { Config, RuntimeFlags } from '@tg-search/common'
+import type { Config, OtelConfig, RuntimeFlags } from '@tg-search/common'
 
 import process from 'node:process'
 
@@ -98,17 +98,24 @@ async function bootstrap() {
 
   // Initialize OpenTelemetry logger if configured
   if (config.otel?.endpoint) {
-    initOtelLogger({
+    const options: OtelConfig = {
       endpoint: config.otel.endpoint,
       serviceName: config.otel.serviceName || 'telegram-search',
       serviceVersion: config.otel.serviceVersion || pkg.version,
       headers: config.otel.headers,
+    }
+
+    initOtelLogger(options)
+
+    setGlobalAfterLog((log: Log) => {
+      emitOtelLog(log.level, log.fields.context || 'unknown', log.message, log.fields)
     })
 
-    emitOtelLog('info', 'OpenTelemetry logger initialized')
-    setGlobalAfterLog((log: Log) => {
-      emitOtelLog(log.level, log.message, log.fields)
-    })
+    logger.withFields({
+      endpoint: options.endpoint,
+      service_name: options.serviceName,
+      service_version: options.serviceVersion,
+    }).log('OpenTelemetry logger initialized')
   }
 
   await initDrizzle(logger, config, flags)
