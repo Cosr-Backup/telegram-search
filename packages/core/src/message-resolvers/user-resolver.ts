@@ -18,6 +18,7 @@ export function createUserResolver(ctx: CoreContext): MessageResolver {
 
   // In-memory cache for user database records to avoid repeated DB queries
   const userCache = new Map<string, DBSelectUser>()
+  const userBlockedList = new Set<string>()
 
   return {
     run: async (opts: MessageResolverOpts) => {
@@ -44,6 +45,10 @@ export function createUserResolver(ctx: CoreContext): MessageResolver {
 
         // If user not found in cache or database, fetch from Telegram API
         if (!dbUser) {
+          if (userBlockedList.has(message.fromId)) {
+            continue
+          }
+
           if (!entities.has(message.fromId)) {
             try {
               const entity = await ctx.getClient().getEntity(message.fromId)
@@ -52,6 +57,7 @@ export function createUserResolver(ctx: CoreContext): MessageResolver {
             }
             catch {
               // TODO: is there needs access_hash?
+              userBlockedList.add(message.fromId)
               logger.withFields({ fromId: message.fromId }).warn('Failed to get entity from Telegram API')
             }
           }
