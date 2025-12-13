@@ -69,7 +69,7 @@ const models = {
 
 describe('storage event handlers - dialogs with accounts', () => {
   it('storage:fetch:dialogs should query dialogs for given account and emit mapped dialogs', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB() })
+    const ctx = createCoreContext({ models, db: getMockEmptyDB })
     registerStorageEventHandlers(ctx, models)
 
     const ACCOUNT_ID = 'account-xyz'
@@ -100,7 +100,7 @@ describe('storage event handlers - dialogs with accounts', () => {
   })
 
   it('storage:record:dialogs should call recordChats with dialogs and accountId', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB() })
+    const ctx = createCoreContext({ models, db: getMockEmptyDB })
     registerStorageEventHandlers(ctx, models)
 
     const ACCOUNT_ID = 'account-abc'
@@ -122,7 +122,7 @@ describe('storage event handlers - dialogs with accounts', () => {
 
 describe('storage event handlers - message access control', () => {
   it('storage:fetch:messages should reject when account has no access to chat', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB() })
+    const ctx = createCoreContext({ models, db: getMockEmptyDB })
     registerStorageEventHandlers(ctx, models)
 
     const ACCOUNT_ID = 'account-no-access'
@@ -152,7 +152,7 @@ describe('storage event handlers - message access control', () => {
   })
 
   it('storage:search:messages should reject when account has no access to specified chatId', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB() })
+    const ctx = createCoreContext({ models, db: getMockEmptyDB })
     registerStorageEventHandlers(ctx, models)
 
     const ACCOUNT_ID = 'account-no-access'

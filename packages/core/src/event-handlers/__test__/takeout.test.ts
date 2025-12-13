@@ -70,7 +70,7 @@ describe('takeout event handlers', () => {
       unwrap: () => undefined,
     })
 
-    const ctx = createCoreContext({ db: getMockEmptyDB(), models })
+    const ctx = createCoreContext({ db: getMockEmptyDB, models })
     ctx.setCurrentAccountId('acc-1')
 
     const takeoutMessages = async function* () {
@@ -122,7 +122,7 @@ describe('takeout event handlers', () => {
 
     mockGetChatMessageStatsByChatId.mockResolvedValue({ unwrap: () => undefined })
 
-    const ctx = createCoreContext({ db: getMockEmptyDB(), models })
+    const ctx = createCoreContext({ db: getMockEmptyDB, models })
     ctx.setCurrentAccountId('acc-1')
 
     const takeoutMessages = async function* (_chatId: string, opts: any) {
@@ -170,7 +170,7 @@ describe('takeout event handlers', () => {
       }),
     })
 
-    const ctx = createCoreContext({ db: getMockEmptyDB(), models })
+    const ctx = createCoreContext({ db: getMockEmptyDB, models })
     ctx.setCurrentAccountId('acc-1')
 
     registerTakeoutEventHandlers(ctx, models.chatMessageStatsModels)(
@@ -208,7 +208,7 @@ describe('takeout event handlers', () => {
       throw new Error('boom')
     })
 
-    const ctx = createCoreContext({ db: getMockEmptyDB(), models })
+    const ctx = createCoreContext({ db: getMockEmptyDB, models })
     ctx.setCurrentAccountId('acc-1')
 
     registerTakeoutEventHandlers(ctx, models.chatMessageStatsModels)(
@@ -242,7 +242,7 @@ describe('takeout event handlers', () => {
       unwrap: () => statsRow,
     })
 
-    const ctx = createCoreContext({ db: getMockEmptyDB(), models })
+    const ctx = createCoreContext({ db: getMockEmptyDB, models })
     ctx.setCurrentAccountId('acc-1')
 
     const calls: any[] = []
@@ -315,7 +315,7 @@ describe('takeout event handlers', () => {
       unwrap: () => undefined,
     })
 
-    const ctx = createCoreContext({ db: getMockEmptyDB(), models })
+    const ctx = createCoreContext({ db: getMockEmptyDB, models })
     ctx.setCurrentAccountId('acc-1')
 
     const calls: any[] = []
