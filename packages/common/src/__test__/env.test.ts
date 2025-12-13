@@ -1,8 +1,8 @@
-import type { Config } from './config-schema'
+import type { Config } from '../config-schema'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { DatabaseType } from './config-schema'
+import { DatabaseType } from '../config-schema'
 import {
   mergeConfigWithEnv,
   parseEnvToConfig,
@@ -10,7 +10,7 @@ import {
   readEnvValue,
   readIntegerEnv,
   readStringEnv,
-} from './env'
+} from '../env'
 
 const createEnv = (entries: Record<string, string | undefined>) => entries
 

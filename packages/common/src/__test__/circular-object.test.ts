@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { circularObject, circularStringify } from './circular-object'
+import { circularObject, circularStringify } from '../circular-object'
 
 describe('circular-object', () => {
   describe('circularStringify', () => {
