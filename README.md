@@ -85,7 +85,9 @@
 
 ## 🚀 快速开始
 
-默认使用 PGlite 浏览器内数据库，如果需要使用 PostgreSQL 以及提供的 MinIO，请参考下文自定义环境变量或者使用 `docker compose up -d` 启动全部服务。
+默认使用 PGlite 作为消息数据库，如果需要使用更高性能的 PostgreSQL 数据库以及提供的 MinIO 作为媒体存储引擎，请参考下文自定义环境变量或者使用 `docker compose up -d` 启动全部服务。
+
+镜像提供 latest 和 nightly 版本，请自行选择。
 
 ```bash
 docker run -d --name telegram-search \
@@ -125,10 +127,8 @@ docker run -d --name telegram-search \
 docker run -d --name telegram-search \
   -p 3333:3333 \
   -v telegram-search-data:/app/data \
-  -e TELEGRAM_API_ID=611335 \
-  -e TELEGRAM_API_HASH=d524b414d21f4d37f08684c1df41ac9c \
   -e DATABASE_TYPE=postgres \
-  -e DATABASE_URL=postgresql://<postgres-host>:5432/postgres \
+  -e DATABASE_URL=postgresql://<host>:5432/postgres \
   ghcr.io/groupultra/telegram-search:latest
 ```
 
