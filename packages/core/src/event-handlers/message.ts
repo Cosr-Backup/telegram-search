@@ -36,14 +36,14 @@ export function registerMessageEventHandlers(ctx: CoreContext) {
     })
 
     emitter.on('message:fetch:specific', async ({ chatId, messageIds }) => {
-      logger.withFields({ chatId, messageIds: messageIds.length }).verbose('Fetching specific messages for media')
+      logger.withFields({ chatId, count: messageIds.length }).verbose('Fetching specific messages for media')
 
       try {
         // Fetch specific messages by their IDs from Telegram
         const messages = await messageService.fetchSpecificMessages(chatId, messageIds)
 
         if (messages.length > 0) {
-          logger.withFields({ count: messages.length }).verbose('Fetched specific messages, processing for media')
+          logger.withFields({ chatId, count: messages.length }).verbose('Fetched specific messages, processing for media')
           emitter.emit('message:process', { messages })
         }
       }
@@ -65,6 +65,43 @@ export function registerMessageEventHandlers(ctx: CoreContext) {
           }
         }
       })
+    })
+
+    emitter.on('message:reprocess', async ({ chatId, messageIds, resolvers }) => {
+      // Validate input
+      if (messageIds.length === 0) {
+        logger.withFields({ chatId }).warn('Re-process called with empty messageIds array')
+        return
+      }
+
+      logger.withFields({ chatId, messageIds, resolvers }).verbose('Re-processing messages')
+
+      try {
+        // Fetch specific messages by their IDs from Telegram
+        const messages = await messageService.fetchSpecificMessages(chatId, messageIds)
+
+        if (messages.length === 0) {
+          logger.withFields({ chatId, messageIds }).warn('No messages found for re-processing')
+          return
+        }
+
+        logger.withFields({ count: messages.length, resolvers }).verbose('Fetched messages for re-processing')
+
+        // NOTE: The 'resolvers' parameter is currently not passed to message:process.
+        // The message:process event runs all enabled resolvers (not disabled in account settings).
+        // This is acceptable for the initial implementation since re-downloading media
+        // will also update other resolver outputs (embeddings, tokens, etc.) if enabled.
+        // Future enhancement: Add resolver filtering to message:process event to run only
+        // specific resolvers and avoid unnecessary work.
+        //
+        // Force refetch to skip database cache and re-download from Telegram.
+        // This is necessary when media files are missing from storage (404 errors).
+        emitter.emit('message:process', { messages, forceRefetch: true })
+      }
+      catch (error) {
+        logger.withError(error as Error).warn('Failed to re-process messages')
+        ctx.withError(error as Error, 'Failed to re-process messages')
+      }
     })
   }
 }

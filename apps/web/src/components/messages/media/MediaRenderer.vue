@@ -6,7 +6,7 @@ import type { AnimationItem } from 'lottie-web'
 import lottie from 'lottie-web'
 import pako from 'pako'
 
-import { getMediaBinaryProvider, hydrateMediaBlobWithCore, useSettingsStore } from '@tg-search/client'
+import { getMediaBinaryProvider, hydrateMediaBlobWithCore, useBridgeStore, useSettingsStore } from '@tg-search/client'
 import { models } from '@tg-search/core'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -21,6 +21,11 @@ const props = defineProps<{
 
 const runtimeError = ref<string>()
 const { debugMode } = storeToRefs(useSettingsStore())
+const bridgeStore = useBridgeStore()
+const isReprocessing = ref(false)
+const hasPermanentError = ref(false)
+const currentSrc = ref<string | undefined>(undefined)
+const hasReprocessedCurrentSrc = ref(false)
 
 export interface WebpageData {
   title: string
@@ -104,6 +109,22 @@ const finalError = computed(() => {
   return processedMedia.value.error || runtimeError.value
 })
 
+watch(
+  () => processedMedia.value.src,
+  (newSrc) => {
+    // When media source changes (e.g. after successful re-process),
+    // reset error and reprocess state so the new URL can be loaded normally.
+    if (newSrc !== currentSrc.value) {
+      currentSrc.value = newSrc
+      hasReprocessedCurrentSrc.value = false
+      hasPermanentError.value = false
+      runtimeError.value = undefined
+      isReprocessing.value = false
+    }
+  },
+  { immediate: true },
+)
+
 let animation: AnimationItem | null = null
 const tgsContainer = ref<HTMLElement | null>(null)
 
@@ -147,6 +168,58 @@ onUnmounted(() => {
   if (animation)
     animation.destroy()
 })
+
+async function handleMediaError(event: Event, mediaType: 'Image' | 'Sticker') {
+  console.error(`${mediaType} failed to load`, processedMedia.value, event)
+
+  const src = processedMedia.value.src
+
+  if (!src) {
+    hasPermanentError.value = true
+    runtimeError.value = `${mediaType} failed to load`
+    return
+  }
+
+  // If we've already permanently failed for this src, do nothing.
+  if (hasPermanentError.value) {
+    return
+  }
+
+  if (!props.message.chatId || !props.message.platformMessageId) {
+    console.error('Missing chatId or platformMessageId for reprocessing')
+    hasPermanentError.value = true
+    runtimeError.value = `${mediaType} failed to load`
+    return
+  }
+
+  const messageId = Number.parseInt(props.message.platformMessageId, 10)
+  if (Number.isNaN(messageId)) {
+    console.error(`Invalid message ID: ${props.message.platformMessageId}`)
+    hasPermanentError.value = true
+    runtimeError.value = `${mediaType} failed to load`
+    return
+  }
+
+  // Trigger a one-time re-process to re-download missing media.
+  isReprocessing.value = true
+  hasReprocessedCurrentSrc.value = true
+  hasPermanentError.value = true
+  runtimeError.value = `${mediaType} not found, re-downloading...`
+
+  bridgeStore.sendEvent('message:reprocess', {
+    chatId: props.message.chatId,
+    messageIds: [messageId],
+    resolvers: ['media'],
+  })
+}
+
+function handleImageError(event: Event) {
+  void handleMediaError(event, 'Image')
+}
+
+function handleStickerError(event: Event) {
+  void handleMediaError(event, 'Sticker')
+}
 </script>
 
 <template>
@@ -168,15 +241,16 @@ onUnmounted(() => {
     />
   </div>
 
-  <!-- Error state -->
-  <div v-if="finalError && debugMode" class="flex items-center gap-2 rounded bg-red-100 p-2 dark:bg-red-900">
+  <!-- Error info (debug only) -->
+  <div v-if="finalError && debugMode" class="mt-1 flex items-center gap-2 rounded bg-red-100 p-2 dark:bg-red-900">
     <div class="i-lucide-alert-circle h-4 w-4 text-red-500" />
     <span class="text-sm text-red-700 dark:text-red-300">{{ finalError }}</span>
   </div>
 
-  <!-- Media content -->
+  <!-- Media content / placeholder -->
   <template v-if="processedMedia.type !== 'unknown'">
-    <div v-if="processedMedia.src">
+    <!-- Normal media rendering when no permanent error -->
+    <div v-if="processedMedia.src && !hasPermanentError">
       <MediaWebpage
         v-if="processedMedia.type === 'webpage'"
         :processed-media="processedMedia"
@@ -191,7 +265,7 @@ onUnmounted(() => {
           ? { aspectRatio: `${processedMedia.width} / ${processedMedia.height}` }
           : {}"
         alt="Image"
-        @error="runtimeError = 'Image failed to load'"
+        @error="handleImageError"
       >
 
       <video
@@ -200,7 +274,7 @@ onUnmounted(() => {
         class="h-auto max-w-[12rem] rounded-lg"
         alt="Video"
         autoplay loop muted playsinline
-        @error="runtimeError = 'Sticker failed to load'"
+        @error="handleStickerError"
       />
 
       <div
@@ -208,6 +282,17 @@ onUnmounted(() => {
         ref="tgsContainer"
         class="h-auto max-w-[12rem] rounded-lg"
       />
+    </div>
+
+    <!-- Fallback placeholder when media has permanently failed -->
+    <div
+      v-else-if="hasPermanentError"
+      class="h-48 max-w-xs flex items-center justify-center border border-gray-300 rounded-lg border-dashed bg-gray-50 text-gray-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-500"
+    >
+      <div class="flex flex-col items-center gap-1">
+        <div class="i-lucide-image-off h-6 w-6" />
+        <span class="text-xs">Media unavailable</span>
+      </div>
     </div>
   </template>
 </template>
