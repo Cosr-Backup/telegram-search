@@ -53,7 +53,15 @@ async function recordMessages(
     chatTypeById.set(row.chat_id, row.chat_type)
 
   const dbMessages = messages.map((message) => {
-    const chatType = chatTypeById.get(message.chatId)!
+    // In normal flows, every chatId should already exist in joined_chats and
+    // provide a concrete chat_type. However, real-time or out-of-order events
+    // (e.g. new messages arriving before dialogs are persisted) can leave us
+    // without a row, which would otherwise cause a NULL in_chat_type write and
+    // violate the NOT NULL constraint. To keep storage robust, fall back to
+    // treating unknown chats as private 'user' dialogs, which errs on the side
+    // of stricter ACL (scoped to the current account) instead of over-sharing.
+    const chatType: JoinedChatType = chatTypeById.get(message.chatId) ?? 'user'
+
     // Only scope by account for private dialogs; keep group/channel messages shared.
     const ownerAccountId = chatType === 'user' ? accountId : null
     return convertToDBInsertMessage(ownerAccountId, chatType, message)

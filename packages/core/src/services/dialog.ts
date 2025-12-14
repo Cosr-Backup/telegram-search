@@ -3,13 +3,13 @@ import type { Result } from '@unbird/result'
 import type { Dialog } from 'telegram/tl/custom/dialog'
 
 import type { CoreContext } from '../context'
-import type { CoreDialog, DialogType } from '../types/dialog'
+import type { CoreDialog } from '../types/dialog'
 
 import { circularObject } from '@tg-search/common'
-import { Err, Ok } from '@unbird/result'
-import { Api } from 'telegram'
+import { Ok } from '@unbird/result'
 
 import { useAvatarHelper } from '../message-resolvers/avatar-resolver'
+import { resolveDialog } from '../utils/dialog'
 
 export type DialogService = ReturnType<typeof createDialogService>
 
@@ -21,69 +21,6 @@ export function createDialogService(ctx: CoreContext, logger: Logger) {
    * Provides shared caches and dedup across services/resolvers.
    */
   const avatarHelper = useAvatarHelper(ctx, logger)
-
-  // Single-fetch deduplication is handled in the centralized helper
-
-  /**
-   * Convert a Telegram `Dialog` to minimal `CoreDialog` data.
-   * Includes avatar metadata where available (no bytes).
-   *
-   * @returns Ok result with normalized dialog fields or Err on unknown dialog.
-   */
-  function resolveDialog(dialog: Dialog): Result<{
-    id: number
-    name: string
-    type: DialogType
-    avatarFileId?: string
-    avatarUpdatedAt?: Date
-  }> {
-    const { isGroup, isChannel, isUser } = dialog
-    let type: DialogType
-    if (isGroup) {
-      type = 'group'
-    }
-    else if (isChannel) {
-      type = 'channel'
-    }
-    else if (isUser) {
-      type = 'user'
-    }
-    else {
-      logger.withFields({ dialog: circularObject(dialog) }).warn('Unknown dialog')
-      return Err('Unknown dialog')
-    }
-
-    const id = dialog.entity?.id
-    if (!id) {
-      logger.withFields({ dialog: circularObject(dialog) }).warn('Unknown dialog with no id')
-      return Err('Unknown dialog with no id')
-    }
-
-    let { name } = dialog
-    if (!name) {
-      name = id.toString()
-    }
-
-    // Extract avatar fileId if possible for cache hinting
-    let avatarFileId: string | undefined
-    try {
-      if (dialog.entity instanceof Api.User && dialog.entity.photo && 'photoId' in dialog.entity.photo) {
-        avatarFileId = (dialog.entity.photo as Api.UserProfilePhoto).photoId?.toString()
-      }
-      else if ((dialog.entity instanceof Api.Chat || dialog.entity instanceof Api.Channel) && dialog.entity.photo && 'photoId' in dialog.entity.photo) {
-        avatarFileId = (dialog.entity.photo as Api.ChatPhoto).photoId?.toString()
-      }
-    }
-    catch {}
-
-    return Ok({
-      id: id.toJSNumber(),
-      name,
-      type,
-      avatarFileId,
-      avatarUpdatedAt: undefined,
-    })
-  }
 
   /**
    * Fetch dialogs and emit base data. Then asynchronously fetch avatars.
@@ -106,6 +43,7 @@ export function createDialogService(ctx: CoreContext, logger: Logger) {
 
       const result = resolveDialog(dialog).orUndefined()
       if (!result) {
+        logger.withFields({ dialog: circularObject(dialog) }).warn('Failed to resolve dialog')
         continue
       }
 
