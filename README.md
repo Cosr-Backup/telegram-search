@@ -96,23 +96,23 @@ docker run -d --name telegram-search \
 > [!IMPORTANT]
 > AI Embedding & LLM 设置现在在应用内**按账户**配置（设置 → API）。
 
-| 变量 | 说明 | 示例 | 默认值 |
-| --- | --- | --- | --- |
-| `TELEGRAM_API_ID` | 来自 [my.telegram.org](https://my.telegram.org/apps) 的 Telegram 应用 ID |
-| `TELEGRAM_API_HASH` | 来自 [my.telegram.org](https://my.telegram.org/apps) 的 Telegram 应用 Hash |
-| `DATABASE_TYPE` | 数据库类型：`postgres` 或 `pglite` | `pglite` |
-| `DATABASE_URL` | PostgreSQL 连接字符串（仅当 `DATABASE_TYPE=postgres` 时） | `postgresql://postgres:123456@pgvector:5432/postgres` | - |
-| `PROXY_URL` | 代理 URL（如 `socks5://user:pass@host:port`） | `socks5://user:pass@host:port` | - |
-| `PORT` | 后端 HTTP/WebSocket 端口 | `3333` | `3000` |
-| `HOST` | 后端监听主机 | `0.0.0.0` | `0.0.0.0` |
-| `BACKEND_URL` | Nginx 上游 URL 用于 `/api` 和 `/ws` | `http://127.0.0.1:3333` | `http://127.0.0.1:3000` |
-| `MINIO_ENDPOINT` | MinIO 端点 | `minio` | `localhost` |
-| `MINIO_PORT` | MinIO 端口 | `9000` | `9000` |
-| `MINIO_USE_SSL` | MinIO 是否使用 SSL | `false` | `false` |
-| `MINIO_ACCESS_KEY` | MinIO 访问密钥 | `minioadmin` | `minioadmin` |
-| `MINIO_SECRET_KEY` | MinIO 密钥 | `minioadmin` | `minioadmin` |
-| `MINIO_BUCKET` | MinIO 桶 | `telegram-media` | `telegram-media` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry OTLP 端点 | `http://loki:3100/otlp/v1/logs` | - |
+| 环境变量                      | 说明                                                                         | 示例值                                                |
+| ----------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `TELEGRAM_API_ID`             | 从 [my.telegram.org](https://my.telegram.org/apps) 获取的 Telegram 应用 ID   |                                                       |
+| `TELEGRAM_API_HASH`           | 从 [my.telegram.org](https://my.telegram.org/apps) 获取的 Telegram 应用 Hash |                                                       |
+| `DATABASE_TYPE`               | 数据库类型，可选 `postgres` 或 `pglite`                                      | `pglite`                                              |
+| `DATABASE_URL`                | PostgreSQL 连接字符串（仅在 `DATABASE_TYPE=postgres` 时填写）                | `postgresql://postgres:123456@pgvector:5432/postgres` |
+| `PROXY_URL`                   | 代理地址（支持如 `socks5://user:pass@host:port` 等格式）                     | `socks5://user:pass@host:port`                        |
+| `PORT`                        | 后端服务 HTTP/WebSocket 监听端口                                             | `3333`                                                |
+| `HOST`                        | 后端服务监听地址                                                             | `0.0.0.0`                                             |
+| `BACKEND_URL`                 | Nginx 作为反向代理时用于 `/api` 和 `/ws` 的上游后端地址                      | `http://127.0.0.1:3333`                               |
+| `MINIO_ENDPOINT`              | MinIO 服务地址（主机名或 IP）                                                | `minio`                                               |
+| `MINIO_PORT`                  | MinIO 服务端口                                                               | `9000`                                                |
+| `MINIO_USE_SSL`               | MinIO 是否启用 SSL（`true` 或 `false`）                                      | `false`                                               |
+| `MINIO_ACCESS_KEY`            | MinIO 访问密钥                                                               | `minioadmin`                                          |
+| `MINIO_SECRET_KEY`            | MinIO 访问密钥对应的密钥                                                     | `minioadmin`                                          |
+| `MINIO_BUCKET`                | MinIO 存储桶名称                                                             | `telegram-media`                                      |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry OTLP 日志采集端点                                              | `http://loki:3100/otlp/v1/logs`                       |
 
 **使用 PostgreSQL 的示例：**
 
