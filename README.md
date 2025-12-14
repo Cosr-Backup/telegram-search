@@ -142,7 +142,7 @@ docker run -d --name telegram-search \
 
 1. 克隆仓库。
 
-2. 运行 docker compose 启动包括数据库在内的全部服务：
+2. 运行 docker compose 启动包括数据库、MinIO 在内的全部服务：
 
 ```bash
 docker compose up -d
