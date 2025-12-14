@@ -78,6 +78,11 @@
 
 访问以下网址开始使用：https://search.lingogram.app
 
+> [!WARNING]
+> 我们未发行任何虚拟货币，请勿上当受骗。
+> 
+> 本软件仅可导出您自己的聊天记录以便搜索，请勿用于非法用途。
+
 ## 🚀 快速开始
 
 默认使用 PGlite 浏览器内数据库，如果需要使用 PostgreSQL 以及提供的 MinIO，请参考下文自定义环境变量或者使用 `docker compose up -d` 启动全部服务。
@@ -173,12 +178,6 @@ pnpm run web:dev
 ```
 
 📖 **更多开发细节和架构细节：** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
-
-## 🚨 警告
-> [!WARNING]
-> 我们未发行任何虚拟货币，请勿上当受骗。
-> 
-> 本软件仅可导出您自己的聊天记录以便搜索，请勿用于非法用途。
 
 ## 🚀 Activity
 
