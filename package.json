@@ -19,7 +19,6 @@
     "web:preview": "pnpm -F @tg-search/web preview",
     "dev": "VITE_WITH_CORE=true pnpm -F @tg-search/web dev",
     "build": "VITE_WITH_CORE=true pnpm -F @tg-search/web build",
-    "build:production": "VITE_WITH_CORE=true pnpm -F @tg-search/web build:production",
     "preview": "pnpm run build && pnpm -F @tg-search/web preview",
     "build:packages": "pnpm -rF=\"./packages/*\" --parallel build",
     "dev:server": "pnpm run server:dev",
