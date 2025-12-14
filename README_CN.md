@@ -1,4 +1,4 @@
-![preview](./assets/preview.png)
+![preview](./docs/assets/preview.png)
 
 ---
 
@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  [<a href="https://search.lingogram.app">立即体验</a>] [<a href="../README.md">English</a>] [<a href="./README_JA.md">日本語</a>]
+  [<a href="https://search.lingogram.app">立即体验</a>] [<a href="./docs/README_EN.md">English</a>] [<a href="./docs/README_JA.md">日本語</a>]
 </p>
 
 <p align="center">
@@ -32,9 +32,14 @@
   </a>
 </p>
 
-**轻松查找和导出您的 Telegram 消息，强大的语义搜索支持所有语言和无分词句子。**
-
-让消息检索更快速、更准确、更注重隐私 — 使用 Docker 本地运行，或在线试用。
+> [!TIP]
+> 您是否曾因 Telegram 无法搜索中文聊天记录而苦恼？
+> 
+> 或者想查找一条重要消息，却因消息过多而难以定位？
+>
+> 现在，使用 Telegram Search，您可以轻松查找和导出自己的 Telegram 消息。强大的语义搜索支持所有语言，完美应对无分词句子的检索场景。
+> 
+> 同时支持向量搜索，实现句子级别的模糊匹配，让查找更智能、更准确。
 
 ## 💖 赞助者
 
@@ -74,19 +79,13 @@
 
 ## 🌐 立即使用
 
-我们提供了一个在线版本，无需自行部署，即可体验 Telegram Search 的全部功能。
-
-> [!NOTE]
-> 我们承诺不会收集任何用户隐私数据，您可以放心使用
+我们提供了一个在线体验版，无需自行部署，即可体验 Telegram Search 的全部功能。
 
 访问以下网址开始使用：https://search.lingogram.app
 
 ## 🚀 快速开始
 
-### 1 分钟启动（Docker）
-
-> [!IMPORTANT]
-> 最简单的开始方式 — 无需任何配置。所有功能都使用合理的默认设置。
+默认使用 PGlite 浏览器内数据库，如果需要使用 PostgreSQL 以及提供的 MinIO，请参考下文自定义环境变量或者使用 `docker compose up -d` 启动全部服务。
 
 ```bash
 docker run -d --name telegram-search \
@@ -95,31 +94,30 @@ docker run -d --name telegram-search \
   ghcr.io/groupultra/telegram-search:latest
 ```
 
-然后打开 **http://localhost:3333** 🎉
+然后打开 **http://localhost:3333** 即可使用 🎉
 
-### 高级配置（可选）
-
-<details>
-<summary>🔧 环境变量</summary>
-
-> [!TIP]
-> 所有环境变量都是可选的。仅在需要时自定义。
-
-| 变量 | 说明 |
-| --- | --- |
-| `TELEGRAM_API_ID` | 来自 [my.telegram.org](https://my.telegram.org/apps) 的 Telegram 应用 ID |
-| `TELEGRAM_API_HASH` | Telegram 应用 Hash |
-| `DATABASE_TYPE` | `postgres` 或 `pglite`（默认：`pglite`） |
-| `DATABASE_URL` | PostgreSQL 连接字符串（仅当 `DATABASE_TYPE=postgres` 时） |
-| `PROXY_URL` | 代理 URL（如 `socks5://user:pass@host:port`） |
-| `PORT` | 后端 HTTP/WebSocket 端口（默认：`3000`） |
-| `HOST` | 后端监听主机（默认：`0.0.0.0`） |
-| `BACKEND_URL` | Nginx 上游 URL 用于 `/api` 和 `/ws`（默认：`http://127.0.0.1:3000`） |
-
+### 自定义环境变量
 
 > [!IMPORTANT]
-> AI Embedding & LLM 设置现在在应用内**按账户**配置（设置 → API）。  
-> 环境变量如 `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, 等已废弃，将在未来版本中移除。
+> AI Embedding & LLM 设置现在在应用内**按账户**配置（设置 → API）。
+
+| 变量 | 说明 | 示例 | 默认值 |
+| --- | --- | --- | --- |
+| `TELEGRAM_API_ID` | 来自 [my.telegram.org](https://my.telegram.org/apps) 的 Telegram 应用 ID |
+| `TELEGRAM_API_HASH` | 来自 [my.telegram.org](https://my.telegram.org/apps) 的 Telegram 应用 Hash |
+| `DATABASE_TYPE` | 数据库类型：`postgres` 或 `pglite` | `pglite` |
+| `DATABASE_URL` | PostgreSQL 连接字符串（仅当 `DATABASE_TYPE=postgres` 时） | `postgresql://postgres:123456@pgvector:5432/postgres` | - |
+| `PROXY_URL` | 代理 URL（如 `socks5://user:pass@host:port`） | `socks5://user:pass@host:port` | - |
+| `PORT` | 后端 HTTP/WebSocket 端口 | `3333` | `3000` |
+| `HOST` | 后端监听主机 | `0.0.0.0` | `0.0.0.0` |
+| `BACKEND_URL` | Nginx 上游 URL 用于 `/api` 和 `/ws` | `http://127.0.0.1:3333` | `http://127.0.0.1:3000` |
+| `MINIO_ENDPOINT` | MinIO 端点 | `minio` | `localhost` |
+| `MINIO_PORT` | MinIO 端口 | `9000` | `9000` |
+| `MINIO_USE_SSL` | MinIO 是否使用 SSL | `false` | `false` |
+| `MINIO_ACCESS_KEY` | MinIO 访问密钥 | `minioadmin` | `minioadmin` |
+| `MINIO_SECRET_KEY` | MinIO 密钥 | `minioadmin` | `minioadmin` |
+| `MINIO_BUCKET` | MinIO 桶 | `telegram-media` | `telegram-media` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry OTLP 端点 | `http://loki:3100/otlp/v1/logs` | - |
 
 **使用 PostgreSQL 的示例：**
 
@@ -140,10 +138,6 @@ docker run -d --name telegram-search \
 - HTTP: `http://user:pass@host:port`
 - MTProxy: `mtproxy://secret@host:port`
 
-📖 **完整环境变量参考：** [docs/ENVIRONMENT.md](./ENVIRONMENT.md)
-
-</details>
-
 ### 使用 Docker Compose 启动
 
 1. 克隆仓库。
@@ -157,9 +151,6 @@ docker compose up -d
 3. 访问 `http://localhost:3333` 打开搜索界面。
 
 ## 💻 开发指南
-
-> [!CAUTION]
-> 开发需要 **Node.js >= 24.11** 和 **pnpm**。请确保已安装。
 
 ### 纯浏览器模式
 
@@ -178,43 +169,20 @@ git clone https://github.com/groupultra/telegram-search.git
 cd telegram-search
 pnpm install
 
-# 复制并修改环境变量（Telegram 密钥、数据库类型/URL、代理等）
 cp .env.example .env
-# 可选：在 .env.local 中覆盖（不会提交到 Git）
 
-# 启动 PostgreSQL + pgvector（或将 DATABASE_URL 指向你自己的数据库）
 docker compose up -d pgvector
 
-# 启动后端与前端（两个终端）
-pnpm run server:dev  # 终端 1：WebSocket 后端（通过 dotenvx 读取 .env/.env.local）
-pnpm run web:dev     # 终端 2：Vue 前端
+pnpm run server:dev
+pnpm run web:dev
 ```
 
-📖 **更多开发细节：** [CONTRIBUTING.md](../CONTRIBUTING.md)
-
-## 🏗️ 架构
-
-本项目采用**事件驱动架构**的 **monorepo** 结构：
-
-- **`apps/web`**: Vue 3 前端
-- **`apps/server`**: WebSocket 服务器
-- **`packages/client`**: 客户端适配器和 stores（Pinia）
-- **`packages/core`**: 事件总线（EventEmitter3）、服务、数据库模型（Drizzle ORM）
-- **`packages/common`**: 日志和工具
-
-**核心技术：**
-- 事件驱动：`CoreContext`（EventEmitter3）
-- 实时通信：WebSocket
-- 数据库：PostgreSQL + pgvector 或 PGlite（浏览器内）
-- 消息处理管道：Embedding、Jieba、Link、Media、User resolvers
-
-📖 **完整架构细节、事件流和图表：** [CONTRIBUTING.md](../CONTRIBUTING.md)
+📖 **更多开发细节和架构细节：** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
 
 ## 🚨 警告
 > [!WARNING]
 > 我们未发行任何虚拟货币，请勿上当受骗。
-
-> [!CAUTION]
+> 
 > 本软件仅可导出您自己的聊天记录以便搜索，请勿用于非法用途。
 
 ## 🚀 Activity

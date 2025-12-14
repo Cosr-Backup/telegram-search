@@ -1,4 +1,4 @@
-![preview](./docs/assets/preview.png)
+![preview](./assets/preview.png)
 
 ---
 
@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-   [<a href="https://search.lingogram.app">Try it Now</a>] [<a href="./docs/README_CN.md">简体中文</a>] [<a href="./docs/README_JA.md">日本語</a>]
+   [<a href="https://search.lingogram.app">Try it Now</a>] [<a href="./README.md">简体中文</a>] [<a href="./docs/README_JA.md">日本語</a>]
 </p>
 
 <p align="center">
@@ -76,9 +76,6 @@ Make message retrieval fast, accurate, and privacy-friendly — self-host or try
 
 We provide an online version where you can experience all features of Telegram Search without self-deployment.
 
-> [!NOTE]
-> We promise not to collect any user privacy data, you can use it with confidence
-
 Visit: https://search.lingogram.app
 
 ## 🚀 Quick Start (Self-Hosted)
@@ -139,7 +136,7 @@ docker run -d --name telegram-search \
 - HTTP: `http://user:pass@host:port`
 - MTProxy: `mtproxy://secret@host:port`
 
-📖 **Full environment variable reference:** [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md)
+📖 **Full environment variable reference:** [ENVIRONMENT.md](./ENVIRONMENT.md)
 
 </details>
 
@@ -189,7 +186,7 @@ pnpm run server:dev  # Terminal 1: WebSocket server (uses .env/.env.local via do
 pnpm run web:dev     # Terminal 2: Vue frontend
 ```
 
-📖 **More development details:** [CONTRIBUTING.md](./CONTRIBUTING.md)
+📖 **More development details:** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
 
 ## 🏗️ Architecture
 
@@ -207,7 +204,7 @@ This project is a **monorepo** with event-driven architecture:
 - PostgreSQL + pgvector OR PGlite (in-browser)
 - Message processing pipeline: Embedding, Jieba, Link, Media, User resolvers
 
-📖 **Full architecture details, event flow, and diagrams:** [CONTRIBUTING.md](./CONTRIBUTING.md)
+📖 **Full architecture details, event flow, and diagrams:** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
 
 ## 🚨 Warnings
 > [!WARNING]

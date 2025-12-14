@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  [<a href="https://search.lingogram.app">すぐに使用</a>] [<a href="../README.md">English</a>] [<a href="./README_CN.md">简体中文</a>]
+  [<a href="https://search.lingogram.app">すぐに使用</a>] [<a href="./README_EN.md">English</a>] [<a href="../README.md">简体中文</a>]
 </p>
 
 <p align="center">
@@ -75,9 +75,6 @@
 ## 🌐 すぐに使用
 
 我々はオンラインバージョンを提供しており、Telegram Search のすべての機能を体験できます。
-
-> [!NOTE]
-> 我々はあなたのプライバシーを尊重します。
 
 以下の URL から開始してください：https://search.lingogram.app
 
