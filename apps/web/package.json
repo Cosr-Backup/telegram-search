@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite --port 3333",
     "build": "vite build",
+    "build:production": "vite build && pnpm sourcemap:inject && pnpm sourcemap:upload",
+    "sourcemap:inject": "pnpm exec posthog-cli sourcemap inject --directory dist/assets",
+    "sourcemap:upload": "pnpm exec posthog-cli sourcemap upload --directory dist/assets",
+    "sourcemap:cleanup": "rm dist/assets/*.map",
     "preview": "vite preview --port 3333",
     "typecheck": "vue-tsc --noEmit"
   },
@@ -41,6 +45,7 @@
     "xsai": "catalog:"
   },
   "devDependencies": {
+    "@posthog/cli": "^0.5.17",
     "@proj-airi/unocss-preset-chromatic": "^1.0.2",
     "@types/nprogress": "^0.2.3",
     "@types/pako": "^2.0.4",

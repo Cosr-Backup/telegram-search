@@ -42,6 +42,8 @@ jobs:
         env:
           VITE_TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
           VITE_TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          POSTHOG_CLI_ENV_ID: ${{ secrets.POSTHOG_CLI_ENV_ID }}
+          POSTHOG_CLI_TOKEN: ${{ secrets.POSTHOG_CLI_TOKEN }}
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
