@@ -169,6 +169,27 @@ onUnmounted(() => {
     animation.destroy()
 })
 
+function sendReprocessForCurrentMessage(mediaType: 'Image' | 'Sticker') {
+  if (!props.message.chatId || !props.message.platformMessageId) {
+    console.error('Missing chatId or platformMessageId for reprocessing')
+    runtimeError.value = `${mediaType} failed to load`
+    return
+  }
+
+  const messageId = Number.parseInt(props.message.platformMessageId, 10)
+  if (Number.isNaN(messageId)) {
+    console.error(`Invalid message ID: ${props.message.platformMessageId}`)
+    runtimeError.value = `${mediaType} failed to load`
+    return
+  }
+
+  bridgeStore.sendEvent('message:reprocess', {
+    chatId: props.message.chatId,
+    messageIds: [messageId],
+    resolvers: ['media'],
+  })
+}
+
 async function handleMediaError(event: Event, mediaType: 'Image' | 'Sticker') {
   console.error(`${mediaType} failed to load`, processedMedia.value, event)
 
@@ -185,32 +206,13 @@ async function handleMediaError(event: Event, mediaType: 'Image' | 'Sticker') {
     return
   }
 
-  if (!props.message.chatId || !props.message.platformMessageId) {
-    console.error('Missing chatId or platformMessageId for reprocessing')
-    hasPermanentError.value = true
-    runtimeError.value = `${mediaType} failed to load`
-    return
-  }
-
-  const messageId = Number.parseInt(props.message.platformMessageId, 10)
-  if (Number.isNaN(messageId)) {
-    console.error(`Invalid message ID: ${props.message.platformMessageId}`)
-    hasPermanentError.value = true
-    runtimeError.value = `${mediaType} failed to load`
-    return
-  }
-
   // Trigger a one-time re-process to re-download missing media.
   isReprocessing.value = true
   hasReprocessedCurrentSrc.value = true
   hasPermanentError.value = true
   runtimeError.value = `${mediaType} not found, re-downloading...`
 
-  bridgeStore.sendEvent('message:reprocess', {
-    chatId: props.message.chatId,
-    messageIds: [messageId],
-    resolvers: ['media'],
-  })
+  sendReprocessForCurrentMessage(mediaType)
 }
 
 function handleImageError(event: Event) {
@@ -219,6 +221,15 @@ function handleImageError(event: Event) {
 
 function handleStickerError(event: Event) {
   void handleMediaError(event, 'Sticker')
+}
+
+function handlePlaceholderClick() {
+  // Determine a reasonable media type label for retry messaging
+  const mediaType: 'Image' | 'Sticker'
+    = processedMedia.value.type === 'photo' ? 'Image' : 'Sticker'
+
+  runtimeError.value = `Retrying ${mediaType.toLowerCase()} download...`
+  sendReprocessForCurrentMessage(mediaType)
 }
 </script>
 
@@ -287,11 +298,12 @@ function handleStickerError(event: Event) {
     <!-- Fallback placeholder when media has permanently failed -->
     <div
       v-else-if="hasPermanentError"
-      class="h-48 max-w-xs flex items-center justify-center border border-gray-300 rounded-lg border-dashed bg-gray-50 text-gray-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-500"
+      class="h-48 max-w-xs flex cursor-pointer items-center justify-center border border-gray-300 rounded-lg border-dashed bg-gray-50 text-gray-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-500"
+      @click="handlePlaceholderClick"
     >
       <div class="flex flex-col items-center gap-1">
         <div class="i-lucide-image-off h-6 w-6" />
-        <span class="text-xs">Media unavailable</span>
+        <span class="text-xs">Media unavailable. Click to retry.</span>
       </div>
     </div>
   </template>
