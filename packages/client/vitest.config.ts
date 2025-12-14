@@ -7,7 +7,7 @@ export default defineConfig({
       'src/**/*.spec.ts',
     ],
     setupFiles: [
-      './src/mock/setupTest.ts',
+      './src/mock/setup-test.ts',
     ],
   },
 })
