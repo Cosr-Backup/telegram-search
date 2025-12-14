@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-   [<a href="https://search.lingogram.app">Try it Now</a>] [<a href="./README.md">简体中文</a>] [<a href="./docs/README_JA.md">日本語</a>]
+  [<a href="https://search.lingogram.app">Live Demo</a>] [<a href="../README.md">简体中文</a>] [<a href="./README_JA.md">日本語</a>]
 </p>
 
 <p align="center">
@@ -32,58 +32,60 @@
   </a>
 </p>
 
-**Easily find and export your Telegram messages with powerful semantic search, supporting all languages and unsegmented sentences.**
-
-Make message retrieval fast, accurate, and privacy-friendly — self-host or try online.
+> [!TIP]
+> Struggling to search Chinese, Japanese, or Korean (CJK) messages in Telegram?
+>
+> Important messages often get lost in the noise — especially when word boundaries aren’t clear.
+>
+> Telegram Search solves this with advanced semantic search and word segmentation, fully supporting CJK and all languages. 
+>
+> Vector search enables fuzzy, sentence-level matching, making it easy to find the information you need—even in languages without spaces.
 
 ## 💖 Sponsors
 
 ![Sponsors](https://github.com/luoling8192/luoling8192/raw/master/sponsorkit/sponsors.svg)
 
-## ✅ What Can It Do
+## ✅ Features
 
 ### 📦 Export & Backup
-- [x] Export to PostgreSQL or in-browser database (PGlite)
-- [x] Universal export format for easy import to any database
-- [ ] One-click export to CSV / JSON
+- [x] Supports exporting chat history to multiple databases: PGlite and PostgreSQL
+- [x] Media files can automatically export to MinIO object storage
+- [x] Messages get vector embedding and word segmentation during export
+- [x] Real-time sync – always fetches the latest chats automatically
 
-### 🔍 Search Your Chat History
-- [x] Keyword search: multi-language support (Chinese, English, etc.)
-- [x] Natural language search: find messages like asking a question
-- [x] Smart filters: by contact/group, time range, with attachments, etc.
+### 🔍 Chat History Search
+- [x] Intelligent word segmentation and precise search, supports multiple languages
+- [x] Supports fuzzy search and vector semantic search for faster finding
+- [x] RAG-powered Q&A: Converse with AI based on chat context, get instant answers
 
-### 🔄 Sync & Storage
-- [x] Incremental sync: sync while using
-- [x] Storage options: server (PostgreSQL + pgvector) or browser-only mode (PGlite)
-- [ ] Resume from breakpoint: auto-continue after failure
+## 🛣️ Roadmap
 
-### 🧠 AI Capabilities
-- [x] Ask AI about your chats: query current chat or selected range
-- [ ] AI message summary: auto-extract key points, todos, conclusions
-- [x] AI-powered search: natural language queries with pinpointed results
-- [x] AI chat: converse with AI based on your chat context
-- [ ] AI analysis: trends, sentiment, keywords, insights from links & files
-- [ ] Local model support: local Embedding / inference (no cloud required)
+### 🧠 AI-powered Features
+- [ ] Automatic conversation summarization
+- [ ] Super Brain: Automatically extract people and event knowledge graphs from chat history
 
-### 🔗 Media & Links (Planned)
-- [ ] Deep indexing for links & images: web summaries, image OCR/descriptions
-- [ ] Attachment content extraction: PDFs, images, audio/video key frames & text
+### 🔗 Media & Link Features
+- [ ] Smartly organize “Saved Messages” for easier management of important content
+- [ ] Deep indexing of links and images: Web summary, image OCR and captioning, empowering search & organization
 
-### 🌐 More Platforms (Planned)
-- [ ] Multi-client support: Discord, etc.
+### 🌐 Multi-platform Expansion
+- [ ] Add support for Telegram Bots for more management scenarios
+- [ ] Expand to Discord and other social/IM platforms for unified cross-platform search and backup
 
-## 🌐 Try it Now
+## 🌐 Try It Now
 
-We provide an online version where you can experience all features of Telegram Search without self-deployment.
+We provide an online demo — no deployment required. Experience all Telegram Search features instantly.
 
 Visit: https://search.lingogram.app
 
-## 🚀 Quick Start (Self-Hosted)
+> [!WARNING]
+> No cryptocurrency has been issued by us. Please do not fall for scams.
+>
+> This tool is only to export your own chat history for searching. Please do not use for illegal purposes.
 
-### 1-Minute Start with Docker
+## 🚀 Quick Start
 
-> [!IMPORTANT]
-> The simplest way to get started — no configuration needed. All features work with sensible defaults.
+By default, the browser-based PGlite database is used. To use PostgreSQL or MinIO, see the environment variables below or start all services with `docker compose up -d`.
 
 ```bash
 docker run -d --name telegram-search \
@@ -92,32 +94,32 @@ docker run -d --name telegram-search \
   ghcr.io/groupultra/telegram-search:latest
 ```
 
-Then open **http://localhost:3333** 🎉
+Then open **http://localhost:3333** to use 🎉
 
-### Advanced Setup (Optional, Environment Variables)
-
-<details>
-<summary>🔧 Environment Variables</summary>
-
-> [!TIP]
-> All environment variables are optional. Customize only if needed.
-
-| Variable | Description |
-| --- | --- |
-| `TELEGRAM_API_ID` | Telegram app ID from [my.telegram.org](https://my.telegram.org/apps) |
-| `TELEGRAM_API_HASH` | Telegram app hash |
-| `DATABASE_TYPE` | `postgres` or `pglite` (default: `pglite`) |
-| `DATABASE_URL` | PostgreSQL connection string (only when `DATABASE_TYPE=postgres`) |
-| `PROXY_URL` | Proxy URL (e.g. `socks5://user:pass@host:port`) |
-| `PORT` | Backend HTTP/WebSocket port inside the container (default: `3000`) |
-| `HOST` | Backend listen host inside the container (default: `0.0.0.0`) |
-| `BACKEND_URL` | Nginx upstream URL for `/api` and `/ws` (default: `http://127.0.0.1:3000`) |
+### Environment Variables
 
 > [!IMPORTANT]
-> AI Embedding & LLM settings are now configured **per account inside the app** (Settings → API).  
-> Environment variables like `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, etc. are deprecated and will be removed in a future release.
+> AI Embedding & LLM settings are now configured per account in-app (Settings → API).
 
-**Example with PostgreSQL:**
+| Variable                      | Description                                                            | Example                                               |
+| ----------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------- |
+| `TELEGRAM_API_ID`             | Telegram app ID from [my.telegram.org](https://my.telegram.org/apps)   |                                                       |
+| `TELEGRAM_API_HASH`           | Telegram app Hash from [my.telegram.org](https://my.telegram.org/apps) |                                                       |
+| `DATABASE_TYPE`               | Database type: `postgres` or `pglite`                                  | `pglite`                                              |
+| `DATABASE_URL`                | PostgreSQL connection string (for `DATABASE_TYPE=postgres` only)       | `postgresql://postgres:123456@pgvector:5432/postgres` |
+| `PROXY_URL`                   | Proxy URL (formats like `socks5://user:pass@host:port` supported)      | `socks5://user:pass@host:port`                        |
+| `PORT`                        | Backend HTTP/WebSocket listen port                                     | `3333`                                                |
+| `HOST`                        | Backend listen address                                                 | `0.0.0.0`                                             |
+| `BACKEND_URL`                 | Backend address for Nginx reverse proxy `/api` and `/ws` routes        | `http://127.0.0.1:3333`                               |
+| `MINIO_ENDPOINT`              | MinIO service address (hostname or IP)                                 | `minio`                                               |
+| `MINIO_PORT`                  | MinIO service port                                                     | `9000`                                                |
+| `MINIO_USE_SSL`               | MinIO uses SSL (`true` or `false`)                                     | `false`                                               |
+| `MINIO_ACCESS_KEY`            | MinIO access key                                                       | `minioadmin`                                          |
+| `MINIO_SECRET_KEY`            | MinIO secret key                                                       | `minioadmin`                                          |
+| `MINIO_BUCKET`                | MinIO bucket name                                                      | `telegram-media`                                      |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry OTLP log exporter endpoint                               | `http://loki:3100/otlp/v1/logs`                       |
+
+**Example using PostgreSQL:**
 
 ```bash
 docker run -d --name telegram-search \
@@ -133,31 +135,24 @@ docker run -d --name telegram-search \
 **Proxy formats:**
 - SOCKS5: `socks5://user:pass@host:port`
 - SOCKS4: `socks4://user:pass@host:port`
-- HTTP: `http://user:pass@host:port`
+- HTTP:    `http://user:pass@host:port`
 - MTProxy: `mtproxy://secret@host:port`
 
-📖 **Full environment variable reference:** [ENVIRONMENT.md](./ENVIRONMENT.md)
+### Start Using Docker Compose
 
-</details>
+1. Clone the repository.
 
-### Start with Docker Compose
-
-1. Clone repository.
-
-2. Run docker compose to start all services including the database:
+2. Start all services (including database, MinIO, etc.) with docker compose:
 
 ```bash
 docker compose up -d
 ```
 
-3. Access `http://localhost:3333` to open the search interface.
+3. Open `http://localhost:3333` for the UI.
 
 ## 💻 Development Guide
 
-> [!CAUTION]
-> Development requires **Node.js >= 24.11** and **pnpm**. Make sure you have them installed.
-
-### Browser-Only Mode
+### Browser Only Mode
 
 ```bash
 git clone https://github.com/groupultra/telegram-search.git
@@ -167,55 +162,25 @@ cp .env.example .env
 pnpm run dev
 ```
 
-### Server Mode (with Backend)
+### Server Mode
 
 ```bash
 git clone https://github.com/groupultra/telegram-search.git
 cd telegram-search
 pnpm install
 
-# Copy and adjust environment variables (Telegram keys, DB type/URL, proxy, etc.)
 cp .env.example .env
-# Optionally override in .env.local (ignored by Git)
 
-# Start PostgreSQL with pgvector (or point DATABASE_URL to your own DB)
-docker compose up -d pgvector
+docker compose up -d pgvector minio
 
-# Start backend & frontend (two terminals)
-pnpm run server:dev  # Terminal 1: WebSocket server (uses .env/.env.local via dotenvx)
-pnpm run web:dev     # Terminal 2: Vue frontend
+pnpm run server:dev
+pnpm run web:dev
 ```
 
-📖 **More development details:** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
-
-## 🏗️ Architecture
-
-This project is a **monorepo** with event-driven architecture:
-
-- **`apps/web`**: Vue 3 frontend
-- **`apps/server`**: WebSocket server
-- **`packages/client`**: Client adapters & stores (Pinia)
-- **`packages/core`**: Event bus (EventEmitter3), services, database models (Drizzle ORM)
-- **`packages/common`**: Logger & utilities
-
-**Key Technologies:**
-- Event-driven with `CoreContext` (EventEmitter3)
-- Real-time communication via WebSocket
-- PostgreSQL + pgvector OR PGlite (in-browser)
-- Message processing pipeline: Embedding, Jieba, Link, Media, User resolvers
-
-📖 **Full architecture details, event flow, and diagrams:** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
-
-## 🚨 Warnings
-> [!WARNING]
-> We have not issued any virtual currency, please do not be deceived.
-
-> [!CAUTION]
-> This software can only export your own chat records for search, please do not use it for illegal purposes.
+📖 **See more architecture and contribution details in:** [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## 🚀 Activity
 
 ![Alt](https://repobeats.axiom.co/api/embed/69d5ef9f5e72cd7901b32ff71b5f359bc7ca42ea.svg "Repobeats analytics image")
 
 [![Star History Chart](https://api.star-history.com/svg?repos=groupultra/telegram-search&type=Date)](https://star-history.com/#groupultra/telegram-search&Date)
-

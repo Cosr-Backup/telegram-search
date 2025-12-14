@@ -162,7 +162,7 @@ cp .env.example .env
 pnpm run dev
 ```
 
-### 服务器模式（带后端）
+### 服务器模式
 
 ```bash
 git clone https://github.com/groupultra/telegram-search.git
@@ -171,7 +171,7 @@ pnpm install
 
 cp .env.example .env
 
-docker compose up -d pgvector
+docker compose up -d pgvector minio
 
 pnpm run server:dev
 pnpm run web:dev
