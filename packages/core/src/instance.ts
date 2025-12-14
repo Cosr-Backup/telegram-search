@@ -1,8 +1,11 @@
+import type { Logger } from '@guiiai/logg'
 import type { Config, CoreMetrics } from '@tg-search/common'
 
 import type { CoreContext } from './context'
 import type { CoreDB } from './db'
 import type { MediaBinaryProvider } from './types'
+
+import { useLogger } from '@guiiai/logg'
 
 import { createCoreContext } from './context'
 import { afterConnectedEventHandler, basicEventHandler, useEventHandler } from './event-handler'
@@ -12,11 +15,14 @@ export function createCoreInstance(
   db: () => CoreDB,
   config: Config,
   mediaBinaryProvider: MediaBinaryProvider | undefined,
+  logger?: Logger,
   metrics?: CoreMetrics,
 ): CoreContext {
-  const ctx = createCoreContext({ db, metrics, models })
+  logger ||= useLogger()
 
-  const { register: registerEventHandler } = useEventHandler(ctx, config, mediaBinaryProvider)
+  const ctx = createCoreContext(db, models, logger, metrics)
+
+  const { register: registerEventHandler } = useEventHandler(ctx, config, mediaBinaryProvider, logger)
   registerEventHandler(basicEventHandler)
   registerEventHandler(afterConnectedEventHandler)
 

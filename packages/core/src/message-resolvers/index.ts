@@ -1,10 +1,9 @@
+import type { Logger } from '@guiiai/logg'
 import type { Result } from '@unbird/result'
 import type { Api } from 'telegram'
 
 import type { SyncOptions } from '../types/events'
 import type { CoreMessage } from '../types/message'
-
-import { useLogger } from '@guiiai/logg'
 
 export interface MessageResolverOpts {
   /**
@@ -31,8 +30,8 @@ export interface MessageResolver {
 
 export type MessageResolverRegistryFn = ReturnType<typeof useMessageResolverRegistry>
 
-export function useMessageResolverRegistry() {
-  const logger = useLogger('core:resolver:registry')
+export function useMessageResolverRegistry(logger: Logger) {
+  logger = logger.withContext('core:resolver:registry')
 
   const registry = new Map<string, MessageResolver>()
 

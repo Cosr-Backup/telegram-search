@@ -1,17 +1,17 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { CoreContext } from '../context'
 import type { ConnectionService } from '../services'
 
-import { useLogger } from '@guiiai/logg'
 import { StringSession } from 'telegram/sessions'
 
-export function registerBasicEventHandlers(ctx: CoreContext) {
-  const { emitter } = ctx
-  const logger = useLogger('core:auth:event')
+export function registerAuthEventHandlers(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:auth:event')
 
   return (
     configuredConnectionService: ConnectionService,
   ) => {
-    emitter.on('auth:login', async ({ phoneNumber, session }) => {
+    ctx.emitter.on('auth:login', async ({ phoneNumber, session }) => {
       if (phoneNumber) {
         return configuredConnectionService.loginWithPhone(phoneNumber)
       }
@@ -22,7 +22,7 @@ export function registerBasicEventHandlers(ctx: CoreContext) {
       }
     })
 
-    emitter.on('auth:logout', async () => {
+    ctx.emitter.on('auth:logout', async () => {
       logger.verbose('Logged out from Telegram')
       const client = ctx.getClient()
       if (client) {

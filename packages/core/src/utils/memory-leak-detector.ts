@@ -1,12 +1,14 @@
-import type { CoreEmitter } from '../context'
+import type { Logger } from '@guiiai/logg'
 
-import { useLogger } from '@guiiai/logg'
+import type { CoreEmitter } from '../context'
 
 /**
  * Detect memory leaks in development mode
  * Returns a cleanup function to clear the interval
  */
-export function detectMemoryLeak(emitter: CoreEmitter): () => void {
+export function detectMemoryLeak(emitter: CoreEmitter, logger: Logger): () => void {
+  logger = logger.withContext('core:memory-leak')
+
   // Memory leak detection in development mode
   // eslint-disable-next-line node/prefer-global/process
   const isDevelopment = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development'
@@ -28,13 +30,13 @@ export function detectMemoryLeak(emitter: CoreEmitter): () => void {
       const totalListeners = Object.values(listenerCounts).reduce((sum, count) => sum + count, 0)
 
       if (totalListeners > 50) {
-        useLogger('core:memory-leak').withFields({
+        logger.withFields({
           totalListeners,
           listenerCounts,
         }).warn('High number of event listeners detected - potential memory leak')
       }
       else {
-        useLogger('core:memory-leak').withFields({
+        logger.withFields({
           totalListeners,
           listenerCounts,
         }).debug('Event listener count check')

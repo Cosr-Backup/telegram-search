@@ -1,3 +1,5 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { MessageResolver, MessageResolverOpts } from '.'
 import type { CoreContext } from '../context'
 import type { PhotoModels } from '../models/photos'
@@ -9,7 +11,6 @@ import type { MediaBinaryProvider } from '../types/storage'
 // eslint-disable-next-line unicorn/prefer-node-protocol
 import { Buffer } from 'buffer'
 
-import { useLogger } from '@guiiai/logg'
 import { newQueue } from '@henrygd/queue'
 import { fileTypeFromBuffer } from 'file-type'
 import { Api } from 'telegram'
@@ -20,11 +21,13 @@ import { must0 } from '../models/utils/must'
 
 export function createMediaResolver(
   ctx: CoreContext,
+  logger: Logger,
   photoModels: PhotoModels,
   stickerModels: StickerModels,
   mediaBinaryProvider: MediaBinaryProvider | undefined,
 ): MessageResolver {
-  const logger = useLogger('core:resolver:media')
+  logger = logger.withContext('core:resolver:media')
+
   // Create concurrency limit queue
   const downloadQueue = newQueue(MEDIA_DOWNLOAD_CONCURRENCY)
 

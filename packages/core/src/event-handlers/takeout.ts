@@ -1,24 +1,23 @@
+import type { Logger } from '@guiiai/logg'
 import type { Api } from 'telegram'
 
 import type { CoreContext } from '../context'
 import type { ChatMessageStatsModels } from '../models/chat-message-stats'
 import type { TakeoutService } from '../services'
 
-import { useLogger } from '@guiiai/logg'
 import { usePagination } from '@tg-search/common'
 
 import { MESSAGE_PROCESS_BATCH_SIZE } from '../constants'
 import { createTask } from '../utils/task'
 
-export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsModels: ChatMessageStatsModels) {
-  const { emitter } = ctx
-  const logger = useLogger('core:takeout:event')
+export function registerTakeoutEventHandlers(ctx: CoreContext, logger: Logger, chatMessageStatsModels: ChatMessageStatsModels) {
+  logger = logger.withContext('core:takeout:event')
 
   // Store active tasks by taskId for abort handling
   const activeTasks = new Map<string, ReturnType<typeof createTask>>()
 
   return (takeoutService: TakeoutService) => {
-    emitter.on('takeout:run', async ({ chatIds, increase, syncOptions }) => {
+    ctx.emitter.on('takeout:run', async ({ chatIds, increase, syncOptions }) => {
       logger.withFields({ chatIds, increase, syncOptions }).verbose('Running takeout')
       const pagination = usePagination()
 
@@ -47,7 +46,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
           logger.withFields({ chatId, mode: 'full' }).verbose('Starting full sync')
 
           // Create task for full sync
-          const task = createTask('takeout', { chatIds: [chatId] }, emitter)
+          const task = createTask('takeout', { chatIds: [chatId] }, ctx.emitter, logger)
           activeTasks.set(task.state.taskId, task)
 
           const opts = {
@@ -86,7 +85,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
                 batchSize,
               }).debug('Processing takeout batch')
 
-              emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
+              ctx.emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
               messages = []
             }
           }
@@ -107,7 +106,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
             logger.withFields({ chatId }).warn('No existing messages found, switching to full sync')
 
             // Create task for fallback full sync
-            const task = createTask('takeout', { chatIds: [chatId] }, emitter)
+            const task = createTask('takeout', { chatIds: [chatId] }, ctx.emitter, logger)
             activeTasks.set(task.state.taskId, task)
 
             const opts = {
@@ -146,7 +145,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
                   batchSize,
                 }).debug('Processing fallback sync batch')
 
-                emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
+                ctx.emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
                 messages = []
               }
             }
@@ -177,7 +176,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
             }).verbose('Incremental sync calculation')
 
             // Create task for manual progress management
-            const task = createTask('takeout', { chatIds: [chatId] }, emitter)
+            const task = createTask('takeout', { chatIds: [chatId] }, ctx.emitter, logger)
             activeTasks.set(task.state.taskId, task)
             task.updateProgress(0, 'Starting incremental sync')
 
@@ -232,7 +231,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
                   batchSize,
                 }).debug('Processing backward fill batch')
 
-                emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
+                ctx.emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
                 messages = []
 
                 // Emit progress update after batch processing
@@ -294,7 +293,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
                   batchSize,
                 }).debug('Processing forward fill batch')
 
-                emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
+                ctx.emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
                 messages = []
 
                 // Emit progress update after batch processing
@@ -320,11 +319,11 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
       }
 
       if (messages.length > 0) {
-        emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
+        ctx.emitter.emit('message:process', { messages, isTakeout: true, syncOptions })
       }
     })
 
-    emitter.on('takeout:task:abort', ({ taskId }) => {
+    ctx.emitter.on('takeout:task:abort', ({ taskId }) => {
       logger.withFields({ taskId }).verbose('Aborting takeout task')
       const task = activeTasks.get(taskId)
       if (task) {
@@ -336,7 +335,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
       }
     })
 
-    emitter.on('takeout:stats:fetch', async ({ chatId }) => {
+    ctx.emitter.on('takeout:stats:fetch', async ({ chatId }) => {
       logger.withFields({ chatId }).verbose('Fetching chat sync stats')
 
       try {
@@ -369,7 +368,7 @@ export function registerTakeoutEventHandlers(ctx: CoreContext, chatMessageStatsM
           syncedRanges,
         }
 
-        emitter.emit('takeout:stats:data', chatSyncStats)
+        ctx.emitter.emit('takeout:stats:data', chatSyncStats)
       }
       catch (error) {
         logger.withError(error).error('Failed to fetch chat sync stats')

@@ -2,6 +2,7 @@ import type { Models } from '../../models'
 
 import bigInt from 'big-integer'
 
+import { useLogger } from '@guiiai/logg'
 import { Api } from 'telegram'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -10,10 +11,11 @@ import { createCoreContext } from '../../context'
 import { registerMessageEventHandlers } from '../message'
 
 const models = {} as unknown as Models
+const logger = useLogger()
 
 describe('message event handlers', () => {
   it('message:reprocess should fetch messages and emit message:process with forceRefetch', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB })
+    const ctx = createCoreContext(getMockEmptyDB, models, logger)
 
     // Mock message service
     const mockMessages = [
@@ -32,7 +34,7 @@ describe('message event handlers', () => {
     }
 
     // Register handlers
-    const registerHandlers = registerMessageEventHandlers(ctx)
+    const registerHandlers = registerMessageEventHandlers(ctx, logger)
     registerHandlers(mockMessageService as any)
 
     // Set up listener for message:process to capture forceRefetch flag
@@ -57,7 +59,7 @@ describe('message event handlers', () => {
   })
 
   it('message:reprocess should handle fetch errors gracefully', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB })
+    const ctx = createCoreContext(getMockEmptyDB, models, logger)
 
     // Mock message service that throws error
     const mockMessageService = {
@@ -67,7 +69,7 @@ describe('message event handlers', () => {
     }
 
     // Register handlers
-    const registerHandlers = registerMessageEventHandlers(ctx)
+    const registerHandlers = registerMessageEventHandlers(ctx, logger)
     registerHandlers(mockMessageService as any)
 
     // Set up listener for core:error
@@ -93,7 +95,7 @@ describe('message event handlers', () => {
   })
 
   it('message:reprocess should not emit message:process if no messages found', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB })
+    const ctx = createCoreContext(getMockEmptyDB, models, logger)
 
     // Mock message service that returns empty array
     const mockMessageService = {
@@ -103,7 +105,7 @@ describe('message event handlers', () => {
     }
 
     // Register handlers
-    const registerHandlers = registerMessageEventHandlers(ctx)
+    const registerHandlers = registerMessageEventHandlers(ctx, logger)
     registerHandlers(mockMessageService as any)
 
     // Set up listener for message:process

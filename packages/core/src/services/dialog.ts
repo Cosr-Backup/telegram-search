@@ -1,10 +1,10 @@
+import type { Logger } from '@guiiai/logg'
 import type { Result } from '@unbird/result'
 import type { Dialog } from 'telegram/tl/custom/dialog'
 
 import type { CoreContext } from '../context'
 import type { CoreDialog, DialogType } from '../types/dialog'
 
-import { useLogger } from '@guiiai/logg'
 import { circularObject } from '@tg-search/common'
 import { Err, Ok } from '@unbird/result'
 import { Api } from 'telegram'
@@ -13,16 +13,14 @@ import { useAvatarHelper } from '../message-resolvers/avatar-resolver'
 
 export type DialogService = ReturnType<typeof createDialogService>
 
-export function createDialogService(ctx: CoreContext) {
-  const { getClient, emitter } = ctx
-
-  const logger = useLogger('core:dialog')
+export function createDialogService(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:dialog')
 
   /**
    * Centralized avatar helper bound to this context.
    * Provides shared caches and dedup across services/resolvers.
    */
-  const avatarHelper = useAvatarHelper(ctx)
+  const avatarHelper = useAvatarHelper(ctx, logger)
 
   // Single-fetch deduplication is handled in the centralized helper
 
@@ -97,7 +95,7 @@ export function createDialogService(ctx: CoreContext) {
     // TODO: use invoke api
     // TODO: use pagination
     // Total list has a total property
-    const dialogList = await getClient().getDialogs()
+    const dialogList = await ctx.getClient().getDialogs()
     // const dialogs = await getClient().invoke(new Api.messages.GetDialogs({})) as Api.messages.Dialogs
 
     const dialogs: CoreDialog[] = []
@@ -138,9 +136,9 @@ export function createDialogService(ctx: CoreContext) {
       })
     }
 
-    useLogger().withFields({ count: dialogs.length }).verbose('Fetched dialogs')
+    logger.withFields({ count: dialogs.length }).verbose('Fetched dialogs')
 
-    emitter.emit('dialog:data', { dialogs })
+    ctx.emitter.emit('dialog:data', { dialogs })
 
     return Ok(dialogs)
   }

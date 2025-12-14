@@ -1,3 +1,4 @@
+import type { Logger } from '@guiiai/logg'
 import type { Result } from '@unbird/result'
 import type { EntityLike } from 'telegram/define'
 
@@ -6,7 +7,6 @@ import type { TakeoutOpts } from '../types/events'
 
 import bigInt from 'big-integer'
 
-import { useLogger } from '@guiiai/logg'
 import { Err, Ok } from '@unbird/result'
 import { Api } from 'telegram'
 
@@ -16,10 +16,8 @@ import { createMinIntervalWaiter } from '../utils/min-interval'
 export type TakeoutService = ReturnType<typeof createTakeoutService>
 
 // https://core.telegram.org/api/takeout
-export function createTakeoutService(ctx: CoreContext) {
-  const { withError, getClient } = ctx
-
-  const logger = useLogger()
+export function createTakeoutService(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:takeout:service')
 
   // Abortable min-interval waiter shared within this service
   const waitHistoryInterval = createMinIntervalWaiter(TELEGRAM_HISTORY_INTERVAL_MS)
@@ -28,7 +26,7 @@ export function createTakeoutService(ctx: CoreContext) {
     const fileMaxSize = bigInt(1024 * 1024 * 1024) // 1GB
 
     // TODO: options
-    return await getClient().invoke(new Api.account.InitTakeoutSession({
+    return await ctx.getClient().invoke(new Api.account.InitTakeoutSession({
       contacts: true,
       messageUsers: true,
       messageChats: true,
@@ -40,7 +38,7 @@ export function createTakeoutService(ctx: CoreContext) {
   }
 
   async function finishTakeout(takeout: Api.account.Takeout, success: boolean) {
-    await getClient().invoke(new Api.InvokeWithTakeout({
+    await ctx.getClient().invoke(new Api.InvokeWithTakeout({
       takeoutId: takeout.id,
       query: new Api.account.FinishTakeoutSession({
         success,
@@ -50,7 +48,7 @@ export function createTakeoutService(ctx: CoreContext) {
 
   async function getHistoryWithMessagesCount(chatId: EntityLike): Promise<Result<Api.messages.TypeMessages & { count: number }>> {
     try {
-      const history = await getClient()
+      const history = await ctx.getClient()
         .invoke(new Api.messages.GetHistory({
           peer: chatId,
           limit: 1,
@@ -65,7 +63,7 @@ export function createTakeoutService(ctx: CoreContext) {
       return Ok(history)
     }
     catch (error) {
-      return Err(withError(error, 'Failed to get history'))
+      return Err(ctx.withError(error, 'Failed to get history'))
     }
   }
 
@@ -102,7 +100,7 @@ export function createTakeoutService(ctx: CoreContext) {
       takeoutSession = await initTakeout()
     }
     catch (error) {
-      task.updateError(withError(error, 'Init takeout session failed'))
+      task.updateError(ctx.withError(error, 'Init takeout session failed'))
       return
     }
 
@@ -123,7 +121,7 @@ export function createTakeoutService(ctx: CoreContext) {
         const hashBigInt = id ^ (id >> 21n) ^ (id << 35n) ^ (id >> 4n) + id
         const hash = bigInt(hashBigInt.toString())
 
-        const peer = await getClient().getInputEntity(chatId)
+        const peer = await ctx.getClient().getInputEntity(chatId)
         const historyQuery = new Api.messages.GetHistory({
           peer,
           offsetId,
@@ -145,7 +143,7 @@ export function createTakeoutService(ctx: CoreContext) {
           logger.verbose('Aborted during rate-limit wait')
           break
         }
-        const result = await getClient().invoke(
+        const result = await ctx.getClient().invoke(
           new Api.InvokeWithTakeout({
             takeoutId: takeoutSession.id,
             query: historyQuery,

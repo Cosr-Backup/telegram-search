@@ -1,17 +1,17 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { CoreContext } from '../context'
 import type { MessageService } from '../services'
 
-import { useLogger } from '@guiiai/logg'
 import { Api } from 'telegram/tl'
 
 import { MESSAGE_PROCESS_BATCH_SIZE } from '../constants'
 
-export function registerMessageEventHandlers(ctx: CoreContext) {
-  const { emitter } = ctx
-  const logger = useLogger('core:message:event')
+export function registerMessageEventHandlers(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:message:event')
 
   return (messageService: MessageService) => {
-    emitter.on('message:fetch', async (opts) => {
+    ctx.emitter.on('message:fetch', async (opts) => {
       logger.withFields({ chatId: opts.chatId, minId: opts.minId, maxId: opts.maxId }).verbose('Fetching messages')
 
       let messages: Api.Message[] = []
@@ -25,17 +25,17 @@ export function registerMessageEventHandlers(ctx: CoreContext) {
             batchSize,
           }).debug('Processing message batch')
 
-          emitter.emit('message:process', { messages })
+          ctx.emitter.emit('message:process', { messages })
           messages = []
         }
       }
 
       if (messages.length > 0) {
-        emitter.emit('message:process', { messages })
+        ctx.emitter.emit('message:process', { messages })
       }
     })
 
-    emitter.on('message:fetch:specific', async ({ chatId, messageIds }) => {
+    ctx.emitter.on('message:fetch:specific', async ({ chatId, messageIds }) => {
       logger.withFields({ chatId, count: messageIds.length }).verbose('Fetching specific messages for media')
 
       try {
@@ -44,7 +44,7 @@ export function registerMessageEventHandlers(ctx: CoreContext) {
 
         if (messages.length > 0) {
           logger.withFields({ chatId, count: messages.length }).verbose('Fetched specific messages, processing for media')
-          emitter.emit('message:process', { messages })
+          ctx.emitter.emit('message:process', { messages })
         }
       }
       catch (error) {
@@ -52,7 +52,7 @@ export function registerMessageEventHandlers(ctx: CoreContext) {
       }
     })
 
-    emitter.on('message:send', async ({ chatId, content }) => {
+    ctx.emitter.on('message:send', async ({ chatId, content }) => {
       logger.withFields({ chatId, content }).verbose('Sending message')
       const updatedMessage = (await messageService.sendMessage(chatId, content)).unwrap() as Api.Updates
 
@@ -61,13 +61,13 @@ export function registerMessageEventHandlers(ctx: CoreContext) {
       updatedMessage.updates.forEach((update) => {
         if (update instanceof Api.UpdateNewMessage) {
           if (update.message instanceof Api.Message) {
-            emitter.emit('message:process', { messages: [update.message] })
+            ctx.emitter.emit('message:process', { messages: [update.message] })
           }
         }
       })
     })
 
-    emitter.on('message:reprocess', async ({ chatId, messageIds, resolvers }) => {
+    ctx.emitter.on('message:reprocess', async ({ chatId, messageIds, resolvers }) => {
       // Validate input
       if (messageIds.length === 0) {
         logger.withFields({ chatId }).warn('Re-process called with empty messageIds array')
@@ -96,7 +96,7 @@ export function registerMessageEventHandlers(ctx: CoreContext) {
         //
         // Force refetch to skip database cache and re-download from Telegram.
         // This is necessary when media files are missing from storage (404 errors).
-        emitter.emit('message:process', { messages, forceRefetch: true })
+        ctx.emitter.emit('message:process', { messages, forceRefetch: true })
       }
       catch (error) {
         logger.withError(error as Error).warn('Failed to re-process messages')

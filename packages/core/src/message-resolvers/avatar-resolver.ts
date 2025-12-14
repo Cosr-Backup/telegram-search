@@ -1,4 +1,5 @@
 /* eslint-disable unicorn/prefer-node-protocol */
+import type { Logger } from '@guiiai/logg'
 import type { Result } from '@unbird/result'
 import type { Dialog } from 'telegram/tl/custom/dialog'
 
@@ -7,7 +8,6 @@ import type { CoreContext } from '../context'
 
 import { Buffer } from 'buffer'
 
-import { useLogger } from '@guiiai/logg'
 import { newQueue } from '@henrygd/queue'
 import { Ok } from '@unbird/result'
 import { Api } from 'telegram'
@@ -35,9 +35,8 @@ type AvatarEntity = Api.User | Api.Chat | Api.Channel
  * Create shared avatar helper bound to a CoreContext.
  * Encapsulates caches and in-flight deduplication for users and dialogs.
  */
-function createAvatarHelper(ctx: CoreContext) {
-  const logger = useLogger('core:resolver:avatar')
-  const { getClient, emitter } = ctx
+function createAvatarHelper(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:resolver:avatar')
 
   // Use tiny-lru to implement LRU cache with automatic expiration and eviction
   const userAvatarCache = lru<AvatarCacheEntry>(MAX_AVATAR_CACHE_SIZE, AVATAR_CACHE_TTL)
@@ -139,7 +138,7 @@ function createAvatarHelper(ctx: CoreContext) {
     return downloadQueue.add(async () => {
       let buffer: Buffer | Uint8Array | undefined
       try {
-        buffer = await withTimeout(getClient().downloadProfilePhoto(entity, { isBig: false }) as Promise<Buffer>, 5000)
+        buffer = await withTimeout(ctx.getClient().downloadProfilePhoto(entity, { isBig: false }) as Promise<Buffer>, 5000)
       }
       catch (err) {
         logger.withError(err as Error).debug('downloadProfilePhoto failed, trying fallback')
@@ -148,7 +147,7 @@ function createAvatarHelper(ctx: CoreContext) {
         const photo = (entity as Record<string, any>).photo
         if (photo) {
           try {
-            buffer = await withTimeout(getClient().downloadMedia(photo, { thumb: -1 }) as Promise<Buffer>, 5000)
+            buffer = await withTimeout(ctx.getClient().downloadMedia(photo, { thumb: -1 }) as Promise<Buffer>, 5000)
           }
           catch (err2) {
             logger.withError(err2 as Error).debug('downloadMedia fallback failed')
@@ -157,7 +156,7 @@ function createAvatarHelper(ctx: CoreContext) {
             // One backoff retry on fallback path
             buffer = await _retryOnce(async () => {
               try {
-                const b = await withTimeout(getClient().downloadMedia(photo, { thumb: -1 }) as Promise<Buffer>, 5000)
+                const b = await withTimeout(ctx.getClient().downloadMedia(photo, { thumb: -1 }) as Promise<Buffer>, 5000)
                 return b ?? undefined
               }
               catch {
@@ -230,7 +229,7 @@ function createAvatarHelper(ctx: CoreContext) {
         const cachedEarly = cache.get(key)
         logger.withFields({ userId: key, expectedFileId: opts.expectedFileId, cachedFileId: cachedEarly?.fileId }).verbose('User avatar early cache validation')
         if (cachedEarly && cachedEarly.fileId === opts.expectedFileId && cachedEarly.byte && cachedEarly.mimeType) {
-          emitter.emit('entity:avatar:data', { userId: key, byte: cachedEarly.byte, mimeType: cachedEarly.mimeType, fileId: opts.expectedFileId })
+          ctx.emitter.emit('entity:avatar:data', { userId: key, byte: cachedEarly.byte, mimeType: cachedEarly.mimeType, fileId: opts.expectedFileId })
           return
         }
       }
@@ -240,12 +239,12 @@ function createAvatarHelper(ctx: CoreContext) {
 
       let entity: AvatarEntity | undefined
       if (isUser) {
-        entity = await getClient().getEntity(String(idRaw)) as Api.User
+        entity = await ctx.getClient().getEntity(String(idRaw)) as Api.User
       }
       else {
         entity = opts.entityOverride ?? dialogEntityCache.get(key)
         if (!entity) {
-          entity = await getClient().getEntity(String(idRaw)) as AvatarEntity
+          entity = await ctx.getClient().getEntity(String(idRaw)) as AvatarEntity
           try {
             if (entity && (entity as any).id)
 
@@ -264,11 +263,11 @@ function createAvatarHelper(ctx: CoreContext) {
       const cached = cache.get(key)
       if (cached && cached.byte && cached.mimeType && ((fileId && cached.fileId === fileId) || !fileId)) {
         if (isUser) {
-          emitter.emit('entity:avatar:data', { userId: key, byte: cached.byte, mimeType: cached.mimeType, fileId })
+          ctx.emitter.emit('entity:avatar:data', { userId: key, byte: cached.byte, mimeType: cached.mimeType, fileId })
         }
         else {
           const idNumCached = typeof idRaw === 'string' ? Number(idRaw) : idRaw
-          emitter.emit('dialog:avatar:data', { chatId: idNumCached, byte: cached.byte, mimeType: cached.mimeType, fileId })
+          ctx.emitter.emit('dialog:avatar:data', { chatId: idNumCached, byte: cached.byte, mimeType: cached.mimeType, fileId })
         }
         return
       }
@@ -304,11 +303,11 @@ function createAvatarHelper(ctx: CoreContext) {
       }
 
       if (isUser) {
-        emitter.emit('entity:avatar:data', { userId: key, byte: result.byte, mimeType: result.mimeType, fileId })
+        ctx.emitter.emit('entity:avatar:data', { userId: key, byte: result.byte, mimeType: result.mimeType, fileId })
       }
       else {
         const idNum = typeof idRaw === 'string' ? Number(idRaw) : idRaw
-        emitter.emit('dialog:avatar:data', { chatId: idNum, byte: result.byte, mimeType: result.mimeType, fileId })
+        ctx.emitter.emit('dialog:avatar:data', { chatId: idNum, byte: result.byte, mimeType: result.mimeType, fileId })
       }
     }
     catch (error) {
@@ -408,7 +407,7 @@ function createAvatarHelper(ctx: CoreContext) {
 
         chatAvatarCache.set(key, { fileId, mimeType: result.mimeType, byte: result.byte })
 
-        emitter.emit('dialog:avatar:data', { chatId: id, byte: result.byte, mimeType: result.mimeType, fileId })
+        ctx.emitter.emit('dialog:avatar:data', { chatId: id, byte: result.byte, mimeType: result.mimeType, fileId })
       }
       catch (error) {
         logger.withError(error as Error).warn('Failed to fetch avatar for dialog')
@@ -461,10 +460,10 @@ function createAvatarHelper(ctx: CoreContext) {
 /**
  * Get or create a shared avatar helper instance bound to the provided context.
  */
-export function useAvatarHelper(ctx: CoreContext) {
+export function useAvatarHelper(ctx: CoreContext, logger: Logger) {
   let helper = __avatarHelperSingleton.get(ctx)
   if (!helper) {
-    helper = createAvatarHelper(ctx)
+    helper = createAvatarHelper(ctx, logger)
     __avatarHelperSingleton.set(ctx, helper)
   }
   return helper
@@ -475,9 +474,10 @@ export function useAvatarHelper(ctx: CoreContext) {
  * For each message, opportunistically fetch sender's avatar and emit bytes.
  * Returns no message mutations (Ok([])) to avoid duplicate storage writes.
  */
-export function createAvatarResolver(ctx: CoreContext): MessageResolver {
-  const logger = useLogger('core:resolver:avatar')
-  const helper = useAvatarHelper(ctx)
+export function createAvatarResolver(ctx: CoreContext, logger: Logger): MessageResolver {
+  logger = logger.withContext('core:resolver:avatar')
+
+  const helper = useAvatarHelper(ctx, logger)
 
   return {
     /**

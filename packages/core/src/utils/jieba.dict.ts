@@ -1,3 +1,5 @@
+import type { Logger } from '@guiiai/logg'
+
 import fs from 'node:fs'
 
 // eslint-disable-next-line unicorn/prefer-node-protocol
@@ -5,14 +7,13 @@ import { Buffer } from 'buffer'
 
 import path from 'pathe'
 
-import { useLogger } from '@guiiai/logg'
 import { useDataPath } from '@tg-search/common/node'
 
 const DICT_URL = 'https://github.com/fxsjy/jieba/raw/master/extra_dict/dict.txt.small'
 const DICT_PATH = path.resolve(useDataPath(), 'dict.txt')
 
-async function downloadDict(): Promise<Buffer> {
-  const logger = useLogger('jieba:downloader')
+async function downloadDict(logger: Logger): Promise<Buffer> {
+  logger = logger.withContext('jieba:downloader')
 
   try {
     logger.withFields({ url: DICT_URL }).log('Downloading jieba dictionary')
@@ -36,10 +37,10 @@ async function downloadDict(): Promise<Buffer> {
   }
 }
 
-export async function loadDict() {
-  let dictBuffer: Buffer
+export async function loadDict(logger: Logger) {
+  logger = logger.withContext('jieba:loader')
 
-  const logger = useLogger('jieba:loader')
+  let dictBuffer: Buffer
 
   // Try to load from cache first
   if (fs.existsSync(DICT_PATH)) {
@@ -48,7 +49,7 @@ export async function loadDict() {
   }
   else {
     // Download if not cached
-    dictBuffer = await downloadDict()
+    dictBuffer = await downloadDict(logger)
   }
 
   return dictBuffer

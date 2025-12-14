@@ -1,38 +1,12 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { CoreContext } from '../context'
-import type { AccountModels } from '../models/accounts'
 import type { EntityService } from '../services/entity'
 
-import { useLogger } from '@guiiai/logg'
-
-export function registerEntityEventHandlers(ctx: CoreContext, accountModels: AccountModels) {
-  const logger = useLogger('core:entity:event')
+export function registerEntityEventHandlers(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:entity:event')
 
   return (entityService: EntityService) => {
-    let hasBootstrappedDialogs = false
-
-    ctx.emitter.on('entity:me:fetch', async () => {
-      logger.verbose('Getting me info')
-      const meInfo = (await entityService.getMeInfo()).expect('Failed to get me info')
-
-      // Record account and set current account ID
-      logger.withFields({ userId: meInfo.id }).verbose('Recording account for current user')
-
-      const account = await accountModels.recordAccount(ctx.getDB(), 'telegram', meInfo.id)
-      ctx.setCurrentAccountId(account.id)
-
-      logger.withFields({ accountId: account.id }).verbose('Set current account ID')
-
-      ctx.emitter.emit('account:ready')
-
-      // Bootstrap dialogs once the account context is established. This
-      // ensures that any dialog/storage handlers relying on currentAccountId
-      // see a consistent state.
-      if (!hasBootstrappedDialogs) {
-        hasBootstrappedDialogs = true
-        ctx.emitter.emit('dialog:fetch')
-      }
-    })
-
     ctx.emitter.on('entity:avatar:fetch', async ({ userId, fileId }) => {
       logger.withFields({ userId, fileId }).debug('Fetching user avatar')
       await entityService.fetchUserAvatar(userId, fileId)

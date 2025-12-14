@@ -1,34 +1,25 @@
-import type { Result } from '@unbird/result'
+import type { Logger } from '@guiiai/logg'
 
 import type { CoreContext } from '../context'
-import type { CoreUserEntity } from '../types/events'
-
-import { Ok } from '@unbird/result'
 
 import { useAvatarHelper } from '../message-resolvers/avatar-resolver'
-import { resolveEntity } from '../utils/entity'
 
 export type EntityService = ReturnType<typeof createEntityService>
 
-export function createEntityService(ctx: CoreContext) {
-  const { getClient, emitter } = ctx
+export function createEntityService(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:entity:service')
 
   /**
    * Delegate avatar fetching to centralized AvatarHelper to avoid duplication.
    * Keeps caches and in-flight dedup at resolver-level per context.
    */
-  const avatarHelper = useAvatarHelper(ctx)
+  const avatarHelper = useAvatarHelper(ctx, logger)
 
   async function getEntity(uid: string) {
-    const user = await getClient().getEntity(uid)
-    return user
-  }
+    logger.withFields({ uid }).debug('Getting entity')
 
-  async function getMeInfo(): Promise<Result<CoreUserEntity>> {
-    const apiUser = await getClient().getMe()
-    const result = resolveEntity(apiUser).expect('Failed to resolve entity') as CoreUserEntity
-    emitter.emit('entity:me:data', result)
-    return Ok(result)
+    const user = await ctx.getClient().getEntity(uid)
+    return user
   }
 
   /**
@@ -58,7 +49,6 @@ export function createEntityService(ctx: CoreContext) {
 
   return {
     getEntity,
-    getMeInfo,
     fetchUserAvatar,
     primeUserAvatarCache,
     primeChatAvatarCache,

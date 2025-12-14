@@ -52,10 +52,12 @@ export interface SessionEventFromCore {
 // Account Events
 // ============================================================================
 
-export interface AccountEventToCore {}
+export interface AccountEventToCore {
+  'account:me:fetch': () => void
+}
 
 export interface AccountEventFromCore {
-  'account:ready': () => void
+  'account:ready': (data: { accountId: string }) => void
 }
 
 // ============================================================================
@@ -130,7 +132,6 @@ export interface DialogEventFromCore {
 // ============================================================================
 
 export interface EntityEventToCore {
-  'entity:me:fetch': () => void
   /**
    * Lazy fetch of a user's avatar by userId. Core should respond with 'entity:avatar:data'.
    * Optional fileId allows core to check cache before fetching.

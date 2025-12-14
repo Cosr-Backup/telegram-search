@@ -1,13 +1,14 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { MessageResolver, MessageResolverOpts } from '.'
 import type { ProcessedCoreMessage } from '../types/message'
 
-import { useLogger } from '@guiiai/logg'
 import { Err, Ok } from '@unbird/result'
 
 import { ensureJieba } from '../utils/jieba'
 
-export function createJiebaResolver(): MessageResolver {
-  const logger = useLogger('core:resolver:jieba')
+export function createJiebaResolver(logger: Logger): MessageResolver {
+  logger = logger.withContext('core:resolver:jieba')
 
   return {
     run: async (opts: MessageResolverOpts) => {
@@ -22,7 +23,7 @@ export function createJiebaResolver(): MessageResolver {
         return Err('No messages to parse')
 
       // Initialize jieba asynchronously
-      const jieba = await ensureJieba()
+      const jieba = await ensureJieba(logger)
       if (!jieba) {
         logger.warn('Jieba not available, skipping tokenization')
         return Err('Jieba initialization failed')

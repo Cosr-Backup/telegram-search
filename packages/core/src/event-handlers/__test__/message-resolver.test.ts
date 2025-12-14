@@ -3,6 +3,7 @@ import type { MessageResolverService } from '../../services/message-resolver'
 
 import bigInt from 'big-integer'
 
+import { useLogger } from '@guiiai/logg'
 import { Api } from 'telegram'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -11,10 +12,11 @@ import { createCoreContext } from '../../context'
 import { registerMessageResolverEventHandlers } from '../message-resolver'
 
 const models = {} as unknown as Models
+const logger = useLogger()
 
 describe('message-resolver event handlers', () => {
   it('should forward forceRefetch to messageResolverService for realtime messages', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB })
+    const ctx = createCoreContext(getMockEmptyDB, models, logger)
 
     const service: MessageResolverService = {
       processMessages: vi.fn(async () => {
@@ -22,7 +24,7 @@ describe('message-resolver event handlers', () => {
       }),
     } as unknown as MessageResolverService
 
-    const registerHandlers = registerMessageResolverEventHandlers(ctx)
+    const registerHandlers = registerMessageResolverEventHandlers(ctx, logger)
     registerHandlers(service)
 
     const telegramMessage = new Api.Message({
@@ -50,7 +52,7 @@ describe('message-resolver event handlers', () => {
   })
 
   it('should forward forceRefetch to messageResolverService in takeout mode via queue', async () => {
-    const ctx = createCoreContext({ models, db: getMockEmptyDB })
+    const ctx = createCoreContext(getMockEmptyDB, models, logger)
 
     const service: MessageResolverService = {
       processMessages: vi.fn(async () => {
@@ -58,7 +60,7 @@ describe('message-resolver event handlers', () => {
       }),
     } as unknown as MessageResolverService
 
-    const registerHandlers = registerMessageResolverEventHandlers(ctx)
+    const registerHandlers = registerMessageResolverEventHandlers(ctx, logger)
     registerHandlers(service)
 
     const telegramMessage = new Api.Message({

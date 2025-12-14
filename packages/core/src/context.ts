@@ -1,3 +1,4 @@
+import type { Logger } from '@guiiai/logg'
 import type { CoreMetrics } from '@tg-search/common'
 import type { TelegramClient } from 'telegram'
 
@@ -27,7 +28,7 @@ export interface CoreContext {
   withError: (error: unknown, description?: string) => Error
   cleanup: () => void
   getAccountSettings: () => Promise<AccountSettings>
-  setAccountSettings: (newSettings: AccountSettings) => Promise<unknown> // TODO: fix return type
+  setAccountSettings: (newSettings: AccountSettings) => Promise<void>
 
   /**
    * Optional metrics sink for core operations.
@@ -37,15 +38,13 @@ export interface CoreContext {
   metrics?: CoreMetrics
 }
 
-export type Service<T> = (ctx: CoreContext) => T
+export type Service<T> = (ctx: CoreContext, logger: Logger) => T
 
-function createErrorHandler(emitter: CoreEmitter) {
-  const logger = useLogger()
-
+function createErrorHandler(emitter: CoreEmitter, logger: Logger) {
   return (error: unknown, description?: string): Error => {
     // Unwrap nested errors
     if (error instanceof Error && 'cause' in error) {
-      return createErrorHandler(emitter)(error.cause, description)
+      return createErrorHandler(emitter, logger)(error.cause, description)
     }
 
     // Emit raw error for frontend to handle (i18n, UI, etc.)
@@ -64,13 +63,9 @@ function createErrorHandler(emitter: CoreEmitter) {
   }
 }
 
-export function createCoreContext(options: {
-  db: () => CoreDB
-  models: Models
-  metrics?: CoreMetrics
-}): CoreContext {
+export function createCoreContext(db: () => CoreDB, models: Models, logger: Logger, metrics?: CoreMetrics): CoreContext {
   const emitter = new EventEmitter<CoreEvent>()
-  const withError = createErrorHandler(emitter)
+  const withError = createErrorHandler(emitter, logger)
   let telegramClient: TelegramClient
   let currentAccountId: string | undefined
 
@@ -86,11 +81,11 @@ export function createCoreContext(options: {
         try {
           fn?.(event as keyof ToCoreEvent)
 
-          useLogger().withFields({ event }).debug('Handle core event')
+          logger.withFields({ event }).debug('Handle core event')
           return await listener(...args)
         }
         catch (error) {
-          useLogger().withError(error instanceof Error ? (error.cause ?? error) : error).error('Failed to handle core event')
+          logger.withError(error instanceof Error ? (error.cause ?? error) : error).error('Failed to handle core event')
         }
       })
 
@@ -98,7 +93,7 @@ export function createCoreContext(options: {
         return onFn
       }
 
-      useLogger().withFields({ event }).debug('Register to core event')
+      logger.withFields({ event }).debug('Register to core event')
       toCoreEvents.add(event as keyof ToCoreEvent)
       return onFn
     }
@@ -112,7 +107,7 @@ export function createCoreContext(options: {
         return _emit(event, ...args)
       }
 
-      useLogger().withFields({ event }).debug('Register from core event')
+      logger.withFields({ event }).debug('Register from core event')
 
       fromCoreEvents.add(event as keyof FromCoreEvent)
       fn?.(event as keyof FromCoreEvent)
@@ -122,7 +117,7 @@ export function createCoreContext(options: {
   }
 
   function setClient(client: TelegramClient) {
-    useLogger().debug('Set Telegram client')
+    logger.debug('Set Telegram client')
     telegramClient = client
   }
 
@@ -135,7 +130,7 @@ export function createCoreContext(options: {
   }
 
   function setCurrentAccountId(accountId: string) {
-    useLogger().withFields({ accountId }).debug('Set current account ID')
+    logger.withFields({ accountId }).debug('Set current account ID')
     currentAccountId = accountId
   }
 
@@ -147,24 +142,24 @@ export function createCoreContext(options: {
   }
 
   async function getAccountSettings(): Promise<AccountSettings> {
-    if (!options.models) {
+    if (!models) {
       throw withError('Models not initialized')
     }
-    return (await options.models.accountSettingsModels.fetchSettingsByAccountId(getDB(), getCurrentAccountId())).expect('Failed to fetch account settings')
+    return (await models.accountSettingsModels.fetchSettingsByAccountId(getDB(), getCurrentAccountId())).expect('Failed to fetch account settings')
   }
 
   async function setAccountSettings(newSettings: AccountSettings) {
-    if (!options.models) {
+    if (!models) {
       throw withError('Models not initialized')
     }
-    await options.models.accountSettingsModels.updateAccountSettings(getDB(), getCurrentAccountId(), newSettings)
+    await models.accountSettingsModels.updateAccountSettings(getDB(), getCurrentAccountId(), newSettings)
   }
 
   // Setup memory leak detection and get cleanup function
-  const cleanupMemoryLeakDetector = detectMemoryLeak(emitter)
+  const cleanupMemoryLeakDetector = detectMemoryLeak(emitter, logger)
 
   function getDB(): CoreDB {
-    const dbInstance = options.db()
+    const dbInstance = db()
     if (!dbInstance) {
       throw withError('Database not initialized')
     }
@@ -172,7 +167,7 @@ export function createCoreContext(options: {
   }
 
   function cleanup() {
-    useLogger().debug('Cleaning up CoreContext')
+    logger.debug('Cleaning up CoreContext')
 
     // Clean up memory leak detector first
     cleanupMemoryLeakDetector()
@@ -191,7 +186,7 @@ export function createCoreContext(options: {
     // Clear account reference
     currentAccountId = undefined
 
-    useLogger().debug('CoreContext cleaned up')
+    logger.debug('CoreContext cleaned up')
   }
 
   wrapEmitterOn(emitter, (event) => {
@@ -217,11 +212,13 @@ export function createCoreContext(options: {
     cleanup,
     getAccountSettings,
     setAccountSettings,
-    metrics: options.metrics,
+    metrics,
   }
 }
 
-export function useService<T>(ctx: CoreContext, fn: Service<T>) {
-  useLogger().withFields({ fn: fn.name }).log('Register service')
-  return fn(ctx)
+export function useService<T>(ctx: CoreContext, logger: Logger, fn: Service<T>) {
+  logger = logger.withContext('core:service')
+
+  logger.withFields({ fn: fn.name }).log('Register service')
+  return fn(ctx, logger)
 }

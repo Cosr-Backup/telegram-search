@@ -1,10 +1,10 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { CoreContext } from '../context'
 import type { Models } from '../models'
 import type { DBRetrievalMessages } from '../models/utils/message'
 import type { CoreDialog } from '../types/dialog'
 import type { CoreMessage } from '../types/message'
-
-import { useLogger } from '@guiiai/logg'
 
 import { convertToCoreRetrievalMessages } from '../models/utils/message'
 import { embedContents } from '../utils/embed'
@@ -16,8 +16,8 @@ function hasNoMedia(message: CoreMessage): boolean {
   return !message.media || message.media.length === 0
 }
 
-export function registerStorageEventHandlers(ctx: CoreContext, dbModels: Models) {
-  const logger = useLogger('core:storage:event')
+export function registerStorageEventHandlers(ctx: CoreContext, logger: Logger, dbModels: Models) {
+  logger = logger.withContext('core:storage:event')
 
   ctx.emitter.on('storage:fetch:messages', async ({ chatId, pagination }) => {
     logger.withFields({ chatId, pagination }).verbose('Fetching messages')
@@ -83,7 +83,7 @@ export function registerStorageEventHandlers(ctx: CoreContext, dbModels: Models)
 
     await dbModels.chatMessageModels.recordMessages(ctx.getDB(), accountId, messages)
 
-    logger.withFields({ count: messages.length, accountId }).verbose('Messages recorded')
+    logger.withFields({ count: messages.length }).verbose('Messages recorded')
   })
 
   ctx.emitter.on('storage:fetch:dialogs', async (data) => {
@@ -94,7 +94,7 @@ export function registerStorageEventHandlers(ctx: CoreContext, dbModels: Models)
     const dbChats = (await dbModels.chatModels.fetchChatsByAccountId(ctx.getDB(), accountId))?.unwrap()
     const chatsMessageStats = (await dbModels.chatMessageStatsModels.getChatMessagesStats(ctx.getDB(), accountId))?.unwrap()
 
-    logger.withFields({ accountId, count: dbChats.length, chatsMessageStatsCount: chatsMessageStats.length }).verbose('Fetched dialogs for account')
+    logger.withFields({ count: dbChats.length, chatsMessageStatsCount: chatsMessageStats.length }).verbose('Fetched dialogs for account')
 
     const dialogs = dbChats.map((chat) => {
       const chatMessageStats = chatsMessageStats.find(stats => stats.chat_id === chat.chat_id)
@@ -115,7 +115,6 @@ export function registerStorageEventHandlers(ctx: CoreContext, dbModels: Models)
       users: dialogs.filter(d => d.type === 'user').length,
       groups: dialogs.filter(d => d.type === 'group').length,
       channels: dialogs.filter(d => d.type === 'channel').length,
-      accountId,
     }).verbose('Recording dialogs')
 
     if (dialogs.length === 0) {
@@ -124,7 +123,7 @@ export function registerStorageEventHandlers(ctx: CoreContext, dbModels: Models)
     }
 
     const result = await dbModels.chatModels.recordChats(ctx.getDB(), dialogs, accountId)
-    logger.withFields({ count: result.length, accountId }).verbose('Successfully recorded dialogs')
+    logger.withFields({ count: result.length }).verbose('Successfully recorded dialogs')
   })
 
   ctx.emitter.on('storage:search:messages', async (params) => {
@@ -160,13 +159,13 @@ export function registerStorageEventHandlers(ctx: CoreContext, dbModels: Models)
       if (embeddingResult)
         embedding = embeddingResult.embeddings[0]
 
-      dbMessages = (await dbModels.chatMessageModels.retrieveMessages(ctx.getDB(), accountId, params.chatId, embeddingDimension, { embedding, text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
+      dbMessages = (await dbModels.chatMessageModels.retrieveMessages(ctx.getDB(), logger, accountId, params.chatId, embeddingDimension, { embedding, text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
     }
     else {
-      dbMessages = (await dbModels.chatMessageModels.retrieveMessages(ctx.getDB(), accountId, params.chatId, embeddingDimension, { text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
+      dbMessages = (await dbModels.chatMessageModels.retrieveMessages(ctx.getDB(), logger, accountId, params.chatId, embeddingDimension, { text: params.content }, params.pagination, filters)).expect('Failed to retrieve messages')
     }
 
-    logger.withFields({ count: dbMessages.length, accountId }).verbose('Retrieved messages')
+    logger.withFields({ count: dbMessages.length }).verbose('Retrieved messages')
     logger.withFields(dbMessages).debug('Retrieved messages')
 
     const coreMessages = convertToCoreRetrievalMessages(dbMessages)

@@ -1,22 +1,21 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { CoreContext } from '../context'
 import type { FetchMessageOpts } from '../types/events'
 
-import { useLogger } from '@guiiai/logg'
 import { Err, Ok } from '@unbird/result'
 import { Api } from 'telegram'
 
 export type MessageService = ReturnType<typeof createMessageService>
 
-export function createMessageService(ctx: CoreContext) {
-  const logger = useLogger('core:message:service')
-
-  const { getClient, withError } = ctx
+export function createMessageService(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:message:service')
 
   async function* fetchMessages(
     chatId: string,
     options: Omit<FetchMessageOpts, 'chatId'>,
   ): AsyncGenerator<Api.Message> {
-    if (!await getClient().isUserAuthorized()) {
+    if (!await ctx.getClient().isUserAuthorized()) {
       logger.error('User not authorized')
       return
     }
@@ -34,7 +33,7 @@ export function createMessageService(ctx: CoreContext) {
 
     try {
       logger.withFields({ limit }).debug('Fetching messages from Telegram server')
-      const messages = await getClient()
+      const messages = await ctx.getClient()
         .getMessages(chatId, {
           limit,
           minId,
@@ -57,12 +56,12 @@ export function createMessageService(ctx: CoreContext) {
       }
     }
     catch (error) {
-      return Err(withError(error, 'Fetch messages failed'))
+      return Err(ctx.withError(error, 'Fetch messages failed'))
     }
   }
 
   async function sendMessage(chatId: string, content: string) {
-    const message = await getClient()
+    const message = await ctx.getClient()
       .invoke(new Api.messages.SendMessage({
         peer: chatId,
         message: content,
@@ -72,7 +71,7 @@ export function createMessageService(ctx: CoreContext) {
   }
 
   async function fetchSpecificMessages(chatId: string, messageIds: number[]): Promise<Api.Message[]> {
-    if (!await getClient().isUserAuthorized()) {
+    if (!await ctx.getClient().isUserAuthorized()) {
       logger.error('User not authorized')
       return []
     }
@@ -85,15 +84,15 @@ export function createMessageService(ctx: CoreContext) {
       logger.withFields({ chatId, count: messageIds.length }).debug('Fetching specific messages from Telegram')
 
       // Telegram API getMessages can accept an array of message IDs
-      const messages = await getClient().getMessages(chatId, {
+      const messages = await ctx.getClient().getMessages(chatId, {
         ids: messageIds,
       })
 
       // Filter out empty messages
-      return messages.filter(message => !(message instanceof Api.MessageEmpty))
+      return messages.filter((message: Api.Message) => !(message instanceof Api.MessageEmpty))
     }
     catch (error) {
-      logger.withError(withError(error, 'Fetch specific messages failed') as Error).error('Failed to fetch specific messages')
+      logger.withError(ctx.withError(error, 'Fetch specific messages failed') as Error).error('Failed to fetch specific messages')
       return []
     }
   }

@@ -1,9 +1,9 @@
+import type { Logger } from '@guiiai/logg'
 import type { CorePagination } from '@tg-search/common'
 
 import type { CoreDB } from '../../db'
 import type { DBRetrievalMessages } from './message'
 
-import { useLogger } from '@guiiai/logg'
 import { and, eq, sql } from 'drizzle-orm'
 
 import { accountJoinedChatsTable } from '../../schemas/account-joined-chats'
@@ -13,6 +13,7 @@ import { ensureJieba } from '../../utils/jieba'
 
 export async function retrieveJieba(
   db: CoreDB,
+  logger: Logger,
   accountId: string,
   chatId: string | undefined,
   content: string,
@@ -22,16 +23,15 @@ export async function retrieveJieba(
     timeRange?: { start?: number, end?: number }
   },
 ): Promise<DBRetrievalMessages[]> {
-  const logger = useLogger('models:retrieve-jieba')
+  logger = logger.withContext('models:retrieve-jieba')
 
-  const jieba = await ensureJieba()
+  const jieba = await ensureJieba(logger)
   const jiebaTokens = jieba?.cut(content) || []
   if (jiebaTokens.length === 0) {
     return []
   }
 
   logger.withFields({
-    accountId,
     chatId,
     content,
     jiebaTokens,

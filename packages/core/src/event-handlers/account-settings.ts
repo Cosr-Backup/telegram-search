@@ -1,10 +1,10 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { CoreContext } from '../context'
 import type { AccountSettingsService } from '../services/account-settings'
 
-import { useLogger } from '@guiiai/logg'
-
-export function registerAccountSettingsEventHandlers(ctx: CoreContext) {
-  const logger = useLogger('core:account-settings:event')
+export function registerAccountSettingsEventHandlers(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:account-settings:event')
 
   return (configService: AccountSettingsService) => {
     ctx.emitter.on('config:fetch', async () => {

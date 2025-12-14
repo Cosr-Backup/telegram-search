@@ -1,3 +1,4 @@
+import type { Logger } from '@guiiai/logg'
 import type { Entity } from 'telegram/define'
 
 import type { MessageResolver, MessageResolverOpts } from '.'
@@ -5,13 +6,12 @@ import type { CoreContext } from '../context'
 import type { UserModels } from '../models/users'
 import type { DBSelectUser } from '../models/utils/types'
 
-import { useLogger } from '@guiiai/logg'
 import { Ok } from '@unbird/result'
 
 import { resolveEntity } from '../utils/entity'
 
-export function createUserResolver(ctx: CoreContext, userModels: UserModels): MessageResolver {
-  const logger = useLogger('core:resolver:user')
+export function createUserResolver(ctx: CoreContext, logger: Logger, userModels: UserModels): MessageResolver {
+  logger = logger.withContext('core:resolver:user')
 
   // In-memory cache for entities fetched from Telegram API during this session
   const entities = new Map<string, Entity>()

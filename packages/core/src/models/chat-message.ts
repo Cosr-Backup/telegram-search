@@ -1,5 +1,6 @@
 // https://github.com/moeru-ai/airi/blob/main/services/telegram-bot/src/models/chat-message.ts
 
+import type { Logger } from '@guiiai/logg'
 import type { CorePagination } from '@tg-search/common'
 
 import type { CoreDB, CoreTransaction } from '../db'
@@ -12,7 +13,6 @@ import type { PhotoModels } from './photos'
 import type { DBRetrievalMessages } from './utils/message'
 import type { DBInsertMessage, DBSelectMessage } from './utils/types'
 
-import { useLogger } from '@guiiai/logg'
 import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm'
 
 import { chatMessagesTable } from '../schemas/chat-messages'
@@ -274,6 +274,7 @@ async function fetchMessageContextWithPhotos(
  */
 async function retrieveMessages(
   db: CoreDB,
+  logger: Logger,
   accountId: string,
   chatId: string | undefined,
   embeddingDimension: EmbeddingDimension,
@@ -287,13 +288,13 @@ async function retrieveMessages(
     timeRange?: { start?: number, end?: number }
   },
 ): PromiseResult<DBRetrievalMessages[]> {
-  return withResult(async () => {
-    const logger = useLogger('models:chat-message:retrieveMessages')
+  logger = logger.withContext('models:chat-message:retrieveMessages')
 
+  return withResult(async () => {
     const retrievalMessages: DBRetrievalMessages[] = []
 
     if (content.text) {
-      const relevantMessages = await retrieveJieba(db, accountId, chatId, content.text, pagination, filters)
+      const relevantMessages = await retrieveJieba(db, logger, accountId, chatId, content.text, pagination, filters)
       logger.withFields({ count: relevantMessages.length }).verbose('Retrieved jieba messages')
       retrievalMessages.push(...relevantMessages)
     }

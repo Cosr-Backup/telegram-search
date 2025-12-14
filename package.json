@@ -30,7 +30,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache . --fix",
-    "typecheck": "pnpm -r --parallel typecheck",
+    "typecheck": "pnpm run build:packages && pnpm -r --parallel typecheck",
     "bump": "bumpp",
     "bump:deps": "taze -I -f -w -r",
     "db:generate": "pnpm apply:env -- drizzle-kit generate",

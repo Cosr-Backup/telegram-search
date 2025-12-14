@@ -2,15 +2,18 @@ import type { MockedFunction } from 'vitest'
 
 import type { CoreEmitter } from '../../context'
 
+import { useLogger } from '@guiiai/logg'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createTask } from '../task'
+
+const logger = useLogger()
 
 describe('utils/task - createTask', () => {
   it('should emit takeout:task:progress on updateProgress for takeout task', () => {
     const emitter = { emit: vi.fn() } as unknown as CoreEmitter
 
-    const task = createTask('takeout', { chatIds: ['1', '2'] }, emitter)
+    const task = createTask('takeout', { chatIds: ['1', '2'] }, emitter, logger)
 
     task.updateProgress(10, 'hello')
 
@@ -36,7 +39,7 @@ describe('utils/task - createTask', () => {
   it('should set progress=-1 and emit on updateError for takeout task', () => {
     const emitter = { emit: vi.fn() } as unknown as CoreEmitter
 
-    const task = createTask('takeout', { chatIds: ['x'] }, emitter)
+    const task = createTask('takeout', { chatIds: ['x'] }, emitter, logger)
 
     task.updateError(new Error('boom'))
 
@@ -57,7 +60,7 @@ describe('utils/task - createTask', () => {
   it('abort should abort signal and set error', () => {
     const emitter = { emit: vi.fn() } as unknown as CoreEmitter
 
-    const task = createTask('takeout', { chatIds: ['x'] }, emitter)
+    const task = createTask('takeout', { chatIds: ['x'] }, emitter, logger)
 
     task.abort()
 
@@ -72,7 +75,7 @@ describe('utils/task - createTask', () => {
   it('should not emit takeout progress events for non-takeout task types', () => {
     const emitter = { emit: vi.fn() } as unknown as CoreEmitter
 
-    const task = createTask('embed', undefined, emitter)
+    const task = createTask('embed', undefined, emitter, logger)
     task.updateProgress(1)
 
     expect(emitter.emit).not.toHaveBeenCalled()

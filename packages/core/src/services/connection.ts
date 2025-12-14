@@ -1,10 +1,10 @@
+import type { Logger } from '@guiiai/logg'
 import type { ProxyConfig } from '@tg-search/common'
 import type { Result } from '@unbird/result'
 import type { ProxyInterface } from 'telegram/network/connection/TCPMTProxy'
 
 import type { CoreContext } from '../context'
 
-import { useLogger } from '@guiiai/logg'
 import { isBrowser, parseProxyUrl } from '@tg-search/common'
 import { Err, Ok } from '@unbird/result'
 import { Api, TelegramClient } from 'telegram'
@@ -14,15 +14,13 @@ import { waitForEvent } from '../utils/promise'
 
 export type ConnectionService = ReturnType<ReturnType<typeof createConnectionService>>
 
-export function createConnectionService(ctx: CoreContext) {
-  const { emitter, withError } = ctx
-
+export function createConnectionService(ctx: CoreContext, logger: Logger) {
   return function (options: {
     apiId: number
     apiHash: string
     proxy?: ProxyConfig
   }) {
-    const logger = useLogger()
+    logger = logger.withContext('services:connection')
 
     const getProxyInterface = (proxyConfig: ProxyConfig | undefined): ProxyInterface | undefined => {
       if (!proxyConfig || !proxyConfig.proxyUrl) {
@@ -102,16 +100,16 @@ export function createConnectionService(ctx: CoreContext) {
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout connecting to Telegram')), 5000)),
         ])
         if (!isConnected) {
-          return Err(withError('Failed to connect to Telegram'))
+          return Err(ctx.withError('Failed to connect to Telegram'))
         }
 
         const isAuthorized = await client.isUserAuthorized()
         if (!isAuthorized) {
-          const error = withError('User is not authorized')
+          const error = ctx.withError('User is not authorized')
           // Surface this as an auth-specific error so the frontend can fall
           // back to manual login and optionally clear the stored session.
-          emitter.emit('auth:error', { error })
-          emitter.emit('auth:disconnected')
+          ctx.emitter.emit('auth:error', { error })
+          ctx.emitter.emit('auth:disconnected')
           return Err(error)
         }
 
@@ -120,7 +118,7 @@ export function createConnectionService(ctx: CoreContext) {
         logger.withFields({ hasSession: !!sessionString }).verbose('Forwarding session to client')
 
         // 1) Forward updated session to frontend so it can persist it.
-        emitter.emit('session:update', { session: sessionString })
+        ctx.emitter.emit('session:update', { session: sessionString })
 
         // 2) Attach client to context for subsequent services.
         ctx.setClient(client)
@@ -128,15 +126,15 @@ export function createConnectionService(ctx: CoreContext) {
         // 3) Finally signal that auth is connected; this will trigger
         //    afterConnectedEventHandler, which will establish current
         //    account ID and bootstrap dialogs/storage.
-        emitter.emit('auth:connected')
+        ctx.emitter.emit('auth:connected')
 
         logger.log('Login with session successful')
 
         return Ok(client)
       }
       catch (error) {
-        emitter.emit('auth:error', { error })
-        return Err(withError(error, 'Failed to connect to Telegram'))
+        ctx.emitter.emit('auth:error', { error })
+        return Err(ctx.withError(error, 'Failed to connect to Telegram'))
       }
     }
 
@@ -152,7 +150,7 @@ export function createConnectionService(ctx: CoreContext) {
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout connecting to Telegram')), 5000)),
         ])
         if (!isConnected) {
-          return Err(withError('Failed to connect to Telegram'))
+          return Err(ctx.withError('Failed to connect to Telegram'))
         }
 
         const isAuthorized = await client.isUserAuthorized()
@@ -165,22 +163,22 @@ export function createConnectionService(ctx: CoreContext) {
         logger.withFields({ hasSession: !!sessionString }).verbose('Forwarding session to client')
 
         // 1) Forward updated session
-        emitter.emit('session:update', { session: sessionString })
+        ctx.emitter.emit('session:update', { session: sessionString })
 
         // 2) Attach client
         ctx.setClient(client)
 
         // 3) Notify connected; afterConnectedEventHandler will establish
         //    current account ID and bootstrap dialogs/storage.
-        emitter.emit('auth:connected')
+        ctx.emitter.emit('auth:connected')
 
         logger.log('Login with phone successful')
 
         return Ok(client)
       }
       catch (error) {
-        emitter.emit('auth:error', { error })
-        return Err(withError(error, 'Failed to connect to Telegram'))
+        ctx.emitter.emit('auth:error', { error })
+        return Err(ctx.withError(error, 'Failed to connect to Telegram'))
       }
     }
 
@@ -195,19 +193,19 @@ export function createConnectionService(ctx: CoreContext) {
           phoneNumber,
           phoneCode: async () => {
             logger.verbose('Waiting for code')
-            emitter.emit('auth:code:needed')
-            const { code } = await waitForEvent(emitter, 'auth:code')
+            ctx.emitter.emit('auth:code:needed')
+            const { code } = await waitForEvent(ctx.emitter, 'auth:code')
             return code
           },
           password: async () => {
             logger.verbose('Waiting for password')
-            emitter.emit('auth:password:needed')
-            const { password } = await waitForEvent(emitter, 'auth:password')
+            ctx.emitter.emit('auth:password:needed')
+            const { password } = await waitForEvent(ctx.emitter, 'auth:password')
             return password
           },
           onError: (error) => {
-            emitter.emit('auth:error', { error })
-            reject(withError(error, 'Failed to sign in to Telegram'))
+            ctx.emitter.emit('auth:error', { error })
+            reject(ctx.withError(error, 'Failed to sign in to Telegram'))
           },
         })
 
@@ -219,7 +217,7 @@ export function createConnectionService(ctx: CoreContext) {
       if (client.connected) {
         await client.invoke(new Api.auth.LogOut())
         await client.disconnect()
-        emitter.emit('auth:disconnected')
+        ctx.emitter.emit('auth:disconnected')
       }
 
       client.session.delete()

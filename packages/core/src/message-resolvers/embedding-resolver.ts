@@ -1,21 +1,22 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { MessageResolver, MessageResolverOpts } from '.'
 import type { CoreContext } from '../context'
 import type { ProcessedCoreMessage } from '../types/message'
 
-import { useLogger } from '@guiiai/logg'
 import { Err, Ok } from '@unbird/result'
 
 import { EmbeddingDimension } from '../types/account-settings'
 import { embedContents } from '../utils/embed'
 
-export function createEmbeddingResolver(ctx: CoreContext): MessageResolver {
-  const logger = useLogger('core:resolver:embedding')
+export function createEmbeddingResolver(ctx: CoreContext, logger: Logger): MessageResolver {
+  logger = logger.withContext('core:resolver:embedding')
 
   return {
     run: async (opts: MessageResolverOpts) => {
       // TODO: should we store the account settings into ctx, to avoid fetching it from db every time?
       const embeddingSettings = (await ctx.getAccountSettings()).embedding
-      logger.withFields({ embedding_settings: embeddingSettings }).verbose('Executing embedding resolver')
+      logger.withFields({ embeddingSettings }).verbose('Executing embedding resolver')
 
       // Skip embedding if API key is empty
       if (!embeddingSettings.apiKey || embeddingSettings.apiKey.trim() === '') {

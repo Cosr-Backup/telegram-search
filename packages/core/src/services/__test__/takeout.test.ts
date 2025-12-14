@@ -4,6 +4,7 @@ import type { AccountSettings } from '../../types/account-settings'
 
 import bigInt from 'big-integer'
 
+import { useLogger } from '@guiiai/logg'
 import { Api } from 'telegram'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -11,6 +12,7 @@ import { createTask as createCoreTask } from '../../utils/task'
 import { createTakeoutService } from '../takeout'
 
 const mockWaiter = vi.fn(async (_signal?: AbortSignal) => {})
+const logger = useLogger()
 
 vi.mock('../../utils/min-interval', () => {
   return {
@@ -35,7 +37,7 @@ function createMockCtx(client: any) {
     withError,
     cleanup: () => {},
     getAccountSettings: async () => ({}) as unknown as AccountSettings,
-    setAccountSettings: async () => ({}),
+    setAccountSettings: async () => {},
     metrics: undefined,
   }
 
@@ -45,7 +47,7 @@ function createMockCtx(client: any) {
 function createTask() {
   // Minimal emitter stub for CoreTask -> task.ts only calls emitter.emit(...)
   const emitter = { emit: vi.fn() } as unknown as CoreEmitter
-  return createCoreTask('takeout', { chatIds: ['123'] }, emitter)
+  return createCoreTask('takeout', { chatIds: ['123'] }, emitter, logger)
 }
 
 describe('takeout service', () => {
@@ -64,7 +66,7 @@ describe('takeout service', () => {
 
     const { ctx } = createMockCtx(client)
 
-    const service = createTakeoutService(ctx)
+    const service = createTakeoutService(ctx, logger)
     const count = await service.getTotalMessageCount('123')
 
     expect(count).toBe(123)
@@ -79,7 +81,7 @@ describe('takeout service', () => {
 
     const { ctx } = createMockCtx(client)
 
-    const service = createTakeoutService(ctx)
+    const service = createTakeoutService(ctx, logger)
     const count = await service.getTotalMessageCount('123')
 
     expect(count).toBe(0)
@@ -124,7 +126,7 @@ describe('takeout service', () => {
 
     const { ctx } = createMockCtx(client)
 
-    const service = createTakeoutService(ctx)
+    const service = createTakeoutService(ctx, logger)
     const task = createTask()
     task.updateProgress = vi.fn()
     task.updateError = vi.fn()
@@ -169,7 +171,7 @@ describe('takeout service', () => {
 
     const { ctx } = createMockCtx(client)
 
-    const service = createTakeoutService(ctx)
+    const service = createTakeoutService(ctx, logger)
     const task = createTask()
     task.updateError = vi.fn()
 
@@ -229,7 +231,7 @@ describe('takeout service', () => {
 
     const { ctx } = createMockCtx(client)
 
-    const service = createTakeoutService(ctx)
+    const service = createTakeoutService(ctx, logger)
     const task = createTask()
 
     // Abort before iteration begins so waitHistoryInterval throws.

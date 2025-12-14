@@ -1,21 +1,18 @@
+import type { Logger } from '@guiiai/logg'
 import type { Api } from 'telegram'
 
 import type { CoreContext } from '../context'
 import type { MessageResolverRegistryFn } from '../message-resolvers'
 import type { SyncOptions } from '../types/events'
 
-import { useLogger } from '@guiiai/logg'
-
 import { convertToCoreMessage } from '../utils/message'
 
 export type MessageResolverService = ReturnType<ReturnType<typeof createMessageResolverService>>
 
-export function createMessageResolverService(ctx: CoreContext) {
-  const logger = useLogger('core:message-resolver:service')
+export function createMessageResolverService(ctx: CoreContext, logger: Logger) {
+  logger = logger.withContext('core:message-resolver:service')
 
   return (resolvers: MessageResolverRegistryFn) => {
-    const { emitter } = ctx
-
     // TODO: worker_threads?
     async function processMessages(
       messages: Api.Message[],
@@ -46,11 +43,11 @@ export function createMessageResolverService(ctx: CoreContext) {
 
       // Return the messages to client first.
       if (!options.takeout) {
-        emitter.emit('message:data', { messages: coreMessages })
+        ctx.emitter.emit('message:data', { messages: coreMessages })
       }
 
       // Storage the messages first
-      emitter.emit('storage:record:messages', { messages: coreMessages })
+      ctx.emitter.emit('storage:record:messages', { messages: coreMessages })
 
       // Avatar resolver is disabled by default (configured in generateDefaultConfig).
       // Current strategy: client-driven, on-demand avatar loading via entity:avatar:fetch.
@@ -74,16 +71,16 @@ export function createMessageResolverService(ctx: CoreContext) {
               const result = (await resolver.run(opts)).unwrap()
 
               if (result.length > 0) {
-                emitter.emit('storage:record:messages', { messages: result })
+                ctx.emitter.emit('storage:record:messages', { messages: result })
               }
             }
             else if (resolver.stream) {
               for await (const message of resolver.stream(opts)) {
                 if (!options.takeout) {
-                  emitter.emit('message:data', { messages: [message] })
+                  ctx.emitter.emit('message:data', { messages: [message] })
                 }
 
-                emitter.emit('storage:record:messages', { messages: [message] })
+                ctx.emitter.emit('storage:record:messages', { messages: [message] })
               }
             }
           }

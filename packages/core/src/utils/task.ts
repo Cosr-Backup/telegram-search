@@ -1,7 +1,8 @@
+import type { Logger } from '@guiiai/logg'
+
 import type { CoreEmitter } from '../context'
 import type { CoreTask, CoreTaskData, CoreTasks, CoreTaskType } from '../types/task'
 
-import { useLogger } from '@guiiai/logg'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
@@ -11,7 +12,10 @@ export function createTask<T extends CoreTaskType>(
   type: T,
   metadata: CoreTasks[T],
   emitter: CoreEmitter,
+  logger: Logger,
 ): CoreTask<T> {
+  logger = logger.withContext('core:task')
+
   const state: CoreTaskData<T> = {
     taskId: uuidv4(),
     type,
@@ -69,7 +73,7 @@ export function createTask<T extends CoreTaskType>(
     abort() {
       state.abortController.abort()
       task.updateError(new Error('Task aborted'))
-      useLogger().withFields({ taskId: state.taskId }).verbose('Task aborted')
+      logger.withFields({ taskId: state.taskId }).verbose('Task aborted')
       return task
     },
 
