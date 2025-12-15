@@ -85,7 +85,9 @@
 
 ## 🚀 クイックスタート
 
-デフォルトでブラウザ内蔵型 PGlite データベースを使用します。PostgreSQL や MinIO を利用したい場合は、下記の環境変数設定、または `docker compose up -d` で全サービスを起動してください。
+デフォルトで PGlite がメッセージデータベースとして使用されます。より高性能な PostgreSQL データベースや、メディアストレージとして MinIO を利用したい場合は、下記の環境変数をカスタマイズするか、`docker compose up -d` で全サービスを起動してください。
+
+イメージには latest と nightly のバージョンが提供されています。ご自身の用途に合わせて選択してください。
 
 ```bash
 docker run -d --name telegram-search \
@@ -177,7 +179,7 @@ pnpm run server:dev
 pnpm run web:dev
 ```
 
-📖 **さらに詳しい開発やアーキテクチャ情報：** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
+📖 **さらに詳しい開発やアーキテクチャ情報：** [CONTRIBUTING.md](../CONTRIBUTING.md)
 
 ## 🚀 活動状況
 

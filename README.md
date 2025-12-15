@@ -79,9 +79,9 @@
 访问以下网址开始使用：https://search.lingogram.app
 
 > [!WARNING]
-> 我们未发行任何虚拟货币，请勿上当受骗。
-> 
-> 本软件仅可导出您自己的聊天记录以便搜索，请勿用于非法用途。
+> 本项目未发行任何虚拟货币，请警惕相关诈骗风险。
+>
+> 本软件仅供您导出和检索个人聊天记录使用，切勿将其用于任何违法用途。
 
 ## 🚀 快速开始
 
@@ -177,7 +177,7 @@ pnpm run server:dev
 pnpm run web:dev
 ```
 
-📖 **更多开发细节和架构细节：** [CONTRIBUTING.md](./docs/CONTRIBUTING.md)
+📖 **更多开发细节和架构细节：** [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## 🚀 Activity
 
