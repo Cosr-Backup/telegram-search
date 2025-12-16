@@ -113,9 +113,7 @@ docker run -d --name telegram-search \
 | `PORT`                        | サーバー HTTP/WebSocket のリッスンポート                                        | `3333`                                                |
 | `HOST`                        | サーバーのバインドアドレス                                                      | `0.0.0.0`                                             |
 | `BACKEND_URL`                 | Nginx 等でリバースプロキシを使う場合の上流サーバー URL                          | `http://127.0.0.1:3333`                               |
-| `MINIO_ENDPOINT`              | MinIO サービスホスト名または IP                                                 | `minio`                                               |
-| `MINIO_PORT`                  | MinIO サービスのポート番号                                                      | `9000`                                                |
-| `MINIO_USE_SSL`               | MinIO で SSL を有効にするか（`true`または`false`）                              | `false`                                               |
+| `MINIO_URL`                   | MinIO サービスホスト名または IP                                                 | `minio`                                               |
 | `MINIO_ACCESS_KEY`            | MinIO アクセスキー                                                              | `minioadmin`                                          |
 | `MINIO_SECRET_KEY`            | MinIO シークレットキー                                                          | `minioadmin`                                          |
 | `MINIO_BUCKET`                | MinIO のバケット名                                                              | `telegram-media`                                      |

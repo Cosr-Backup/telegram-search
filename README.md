@@ -113,9 +113,7 @@ docker run -d --name telegram-search \
 | `PORT`                        | 后端服务 HTTP/WebSocket 监听端口                                             | `3333`                                                |
 | `HOST`                        | 后端服务监听地址                                                             | `0.0.0.0`                                             |
 | `BACKEND_URL`                 | Nginx 作为反向代理时用于 `/api` 和 `/ws` 的上游后端地址                      | `http://127.0.0.1:3333`                               |
-| `MINIO_ENDPOINT`              | MinIO 服务地址（主机名或 IP）                                                | `minio`                                               |
-| `MINIO_PORT`                  | MinIO 服务端口                                                               | `9000`                                                |
-| `MINIO_USE_SSL`               | MinIO 是否启用 SSL（`true` 或 `false`）                                      | `false`                                               |
+| `MINIO_URL`                   | MinIO 服务地址                                                               | `http://minio:9000`                                   |
 | `MINIO_ACCESS_KEY`            | MinIO 访问密钥                                                               | `minioadmin`                                          |
 | `MINIO_SECRET_KEY`            | MinIO 访问密钥对应的密钥                                                     | `minioadmin`                                          |
 | `MINIO_BUCKET`                | MinIO 存储桶名称                                                             | `telegram-media`                                      |

@@ -113,9 +113,7 @@ Then open **http://localhost:3333** to use it 🎉
 | `PORT`                        | Backend HTTP/WebSocket listening port                        | `3333`                                                |
 | `HOST`                        | Backend listening address                                    | `0.0.0.0`                                             |
 | `BACKEND_URL`                 | Upstream backend for Nginx `/api`/`/ws` proxy                | `http://127.0.0.1:3333`                               |
-| `MINIO_ENDPOINT`              | MinIO service address                                        | `minio`                                               |
-| `MINIO_PORT`                  | MinIO service port                                           | `9000`                                                |
-| `MINIO_USE_SSL`               | MinIO SSL enabled (`true`/`false`)                           | `false`                                               |
+| `MINIO_URL`                   | MinIO service address                                        | `http://minio:9000`                                   |
 | `MINIO_ACCESS_KEY`            | MinIO access key                                             | `minioadmin`                                          |
 | `MINIO_SECRET_KEY`            | MinIO secret key                                             | `minioadmin`                                          |
 | `MINIO_BUCKET`                | MinIO bucket name                                            | `telegram-media`                                      |

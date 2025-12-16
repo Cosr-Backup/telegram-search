@@ -60,11 +60,9 @@ describe('parseEnvToConfig', () => {
       TELEGRAM_API_HASH: 'hash',
       PROXY_MT_PROXY: 'true',
       PROXY_URL: 'socks5://proxy',
-      MINIO_ENDPOINT: 'localhost',
-      MINIO_PORT: '9000',
+      MINIO_URL: 'access',
       MINIO_ACCESS_KEY: 'access',
       MINIO_SECRET_KEY: 'secret',
-      MINIO_USE_SSL: 'false',
       MINIO_BUCKET: 'telegram-media',
       OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4317',
     })
@@ -77,11 +75,9 @@ describe('parseEnvToConfig', () => {
     expect(config.api?.telegram?.apiHash).toBe('hash')
     expect(config.api?.telegram?.proxy?.MTProxy).toBe(true)
     expect(config.api?.telegram?.proxy?.proxyUrl).toBe('socks5://proxy')
-    expect(config.minio?.endpoint).toBe('localhost')
-    expect(config.minio?.port).toBe(9000)
+    expect(config.minio?.url).toBe('access')
     expect(config.minio?.accessKey).toBe('access')
     expect(config.minio?.secretKey).toBe('secret')
-    expect(config.minio?.useSSL).toBe(false)
     expect(config.minio?.bucket).toBe('telegram-media')
     expect(config.otel?.endpoint).toBe('http://localhost:4317')
 
@@ -94,11 +90,9 @@ describe('mergeConfigWithEnv', () => {
     const existingConfig: Config = {
       database: { url: 'postgres://override', type: DatabaseType.POSTGRES },
       minio: {
-        endpoint: 'localhost',
-        port: 9000,
+        url: 'http://localhost:9000',
         accessKey: 'access',
         secretKey: 'secret',
-        useSSL: false,
         bucket: 'telegram-media',
       },
       api: {
@@ -118,11 +112,9 @@ describe('mergeConfigWithEnv', () => {
     const merged = mergeConfigWithEnv(env, existingConfig)
 
     expect(merged.database?.url).toBe('postgres://override')
-    expect(merged.minio?.endpoint).toBe('localhost')
-    expect(merged.minio?.port).toBe(9000)
+    expect(merged.minio?.url).toBe('http://localhost:9000')
     expect(merged.minio?.accessKey).toBe('access')
     expect(merged.minio?.secretKey).toBe('secret')
-    expect(merged.minio?.useSSL).toBe(false)
     expect(merged.minio?.bucket).toBe('telegram-media')
     expect(merged.api?.telegram?.apiId).toBe('from-config')
     expect(merged.api?.telegram?.apiHash).toBe('hash-from-env')
