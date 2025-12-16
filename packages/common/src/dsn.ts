@@ -12,7 +12,6 @@ interface MinioConnectionOptions {
 
 export function parseMinioDSN(dsn: string): MinioConnectionOptions {
   const url = new URL(dsn)
-  console.log(url)
 
   const endPoint = url.hostname
   const port = Number(url.port)
