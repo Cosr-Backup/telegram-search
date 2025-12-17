@@ -72,7 +72,7 @@
 - [ ] Telegram Bot support for advanced scenarios
 - [ ] Extend to Discord and other platforms for unified cross-platform searching and backups
 
-## 🌐 Try It Now
+## 🎉 Try It Now
 
 We offer an online experience—no deployment needed. Try all Telegram Search features instantly.
 
