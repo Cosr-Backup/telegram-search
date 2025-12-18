@@ -70,6 +70,13 @@ export function parseEnvToConfig(env: Environment, logger?: Logger): Config {
       bucket: readEnvValue('MINIO_BUCKET', env),
       accessKey: readEnvValue('MINIO_ACCESS_KEY', env),
       secretKey: readEnvValue('MINIO_SECRET_KEY', env),
+
+      /**
+       * For backward compatibility
+       */
+      endPoint: readEnvValue('MINIO_ENDPOINT', env),
+      port: readIntegerEnv('MINIO_PORT', env),
+      useSSL: readBooleanEnv('MINIO_USE_SSL', env),
     },
     otel: {
       endpoint: readEnvValue('OTEL_EXPORTER_OTLP_ENDPOINT', env),
@@ -81,6 +88,12 @@ export function parseEnvToConfig(env: Environment, logger?: Logger): Config {
   const parsedConfig = safeParse(configSchema, partialConfig)
   if (!parsedConfig.success) {
     throw new Error('Failed to parse config', { cause: parsedConfig.issues })
+  }
+
+  // For backward compatibility
+  if (parsedConfig.output.minio?.endPoint && parsedConfig.output.minio?.port) {
+    parsedConfig.output.minio.url = `${parsedConfig.output.minio.useSSL ? 'https' : 'http'}://${parsedConfig.output.minio.endPoint}:${parsedConfig.output.minio.port}`
+    logger?.withFields({ minio: parsedConfig.output.minio }).warn('MINIO_ENDPOINT and MINIO_PORT are deprecated, use MINIO_URL instead')
   }
 
   logger?.withFields({ config: parsedConfig.output }).debug('Config parsed')

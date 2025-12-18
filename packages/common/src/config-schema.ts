@@ -73,6 +73,19 @@ export const minioConfigSchema = object({
   url: optional(string()),
   accessKey: optional(string()),
   secretKey: optional(string()),
+
+  /**
+   * @deprecated Use url instead
+   */
+  endPoint: optional(string()),
+  /**
+   * @deprecated Use url instead
+   */
+  port: optional(number(), 9000),
+  /**
+   * @deprecated Use url instead
+   */
+  useSSL: optional(boolean(), false),
 })
 
 export const otelConfigSchema = object({
