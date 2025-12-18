@@ -66,9 +66,10 @@ describe('parseEnvToConfig', () => {
       MINIO_BUCKET: 'telegram-media',
       OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4317',
     })
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-
+    // Suppress console.warn for deprecated MINIO keys, if any
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const config = parseEnvToConfig(env)
+    warnSpy.mockRestore()
 
     expect(config.database?.url).toBe('postgres://user:pass@host:5432/db')
     expect(config.api?.telegram?.apiId).toBe('12345')
@@ -80,8 +81,35 @@ describe('parseEnvToConfig', () => {
     expect(config.minio?.secretKey).toBe('secret')
     expect(config.minio?.bucket).toBe('telegram-media')
     expect(config.otel?.endpoint).toBe('http://localhost:4317')
+  })
 
-    consoleSpy.mockRestore()
+  it('sets minio.url using deprecated endPoint and port if provided, and logs a warning', () => {
+    const env = createEnv({
+      MINIO_ENDPOINT: 'minio.example.com',
+      MINIO_PORT: '1234',
+      MINIO_USE_SSL: 'true',
+    })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    let config: Config
+
+    // Patch a logger to capture warn
+    const logger = {
+      withFields: vi.fn(() => ({
+        warn: warnSpy,
+        debug: vi.fn(),
+      })),
+    }
+
+    config = parseEnvToConfig(env, logger as any)
+
+    // It should prefer https in url because useSSL is true in this case.
+    expect(config.minio?.url).toBe('https://minio.example.com:1234')
+
+    // Confirm warn was called for deprecation. (cannot access log text, but warn must be called)
+    expect(warnSpy).toHaveBeenCalled()
+
+    warnSpy.mockRestore()
   })
 })
 
@@ -94,6 +122,10 @@ describe('mergeConfigWithEnv', () => {
         accessKey: 'access',
         secretKey: 'secret',
         bucket: 'telegram-media',
+
+        port: 9000,
+        useSSL: false,
+        endPoint: 'http://localhost:9000',
       },
       api: {
         telegram: {
@@ -107,9 +139,12 @@ describe('mergeConfigWithEnv', () => {
       DATABASE_URL: 'postgres://env',
       TELEGRAM_API_HASH: 'hash-from-env',
     })
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    // Suppress console.warn for deprecated MINIO keys, if any
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const merged = mergeConfigWithEnv(env, existingConfig)
+
+    warnSpy.mockRestore()
 
     expect(merged.database?.url).toBe('postgres://override')
     expect(merged.minio?.url).toBe('http://localhost:9000')
@@ -118,7 +153,5 @@ describe('mergeConfigWithEnv', () => {
     expect(merged.minio?.bucket).toBe('telegram-media')
     expect(merged.api?.telegram?.apiId).toBe('from-config')
     expect(merged.api?.telegram?.apiHash).toBe('hash-from-env')
-
-    consoleSpy.mockRestore()
   })
 })

@@ -34,6 +34,10 @@ const config: MinioConfig = {
   accessKey: 'access',
   secretKey: 'secret',
   bucket: 'telegram-media-test',
+
+  port: 9000,
+  useSSL: false,
+  endPoint: 'http://localhost:9000',
 }
 
 describe('storage/minio - initMinioMediaStorage', () => {
