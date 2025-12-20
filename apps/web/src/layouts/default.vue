@@ -129,7 +129,7 @@ function closeMobileDrawer() {
     >
       <!-- Login prompt banner -->
       <div
-        v-if="!isReady"
+        v-if="!isReady && !$route.path.startsWith('/login')"
         class="flex items-center justify-center px-6 py-8"
       >
         <div
