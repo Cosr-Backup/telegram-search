@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import buildTime from '~build/time'
 
-import { useAccountStore, useSettingsStore } from '@tg-search/client'
+import { useAuthStore, useSettingsStore } from '@tg-search/client'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { abbreviatedSha as gitShortSha } from '~build/git'
 import { version as pkgVersion } from '~build/package'
@@ -16,8 +16,7 @@ import { Button } from '../components/ui/Button'
 const settingsStore = useSettingsStore()
 const { theme } = storeToRefs(settingsStore)
 
-const accountStore = useAccountStore()
-const { isReady } = storeToRefs(accountStore)
+const { isLoggedIn } = storeToRefs(useAuthStore())
 
 const route = useRoute()
 
@@ -129,7 +128,7 @@ function closeMobileDrawer() {
     >
       <!-- Login prompt banner -->
       <div
-        v-if="!isReady && !$route.path.startsWith('/login')"
+        v-if="!isLoggedIn && !$route.path.startsWith('/login')"
         class="flex items-center justify-center px-6 py-8"
       >
         <div
