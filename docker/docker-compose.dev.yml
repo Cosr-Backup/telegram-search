@@ -52,7 +52,8 @@ services:
       - app_data:/app/data
     restart: unless-stopped
     env_file:
-      - .env.example
+      - path: .env.example
+        required: false
       - path: .env
         required: false
       - path: .env.local
