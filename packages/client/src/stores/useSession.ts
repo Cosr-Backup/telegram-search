@@ -10,7 +10,7 @@ import { createSessionStore } from '../utils/session-store'
 const CORE_TYPE = 'core-bridge'
 const WS_TYPE = 'websocket'
 
-export const useSessionStore = defineStore('client-session', () => {
+export const useSessionStore = defineStore('session', () => {
   // Separate keys for core-bridge (browser) and websocket (server) modes
   // to avoid session pollution between environments.
   const type = IS_CORE_MODE ? CORE_TYPE : WS_TYPE
