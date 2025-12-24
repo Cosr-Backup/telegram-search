@@ -83,6 +83,8 @@ async function bootstrap() {
   const config = parseEnvToConfig(process.env, logger)
 
   if (process.env.OTEL_ENABLED === 'true') {
+    logger.log('OTEL is enabled')
+
     const otelDebug = process.env.OTEL_DEBUG === 'true' || undefined
     registerOtel({ version: pkg.version, debug: otelDebug })
 
