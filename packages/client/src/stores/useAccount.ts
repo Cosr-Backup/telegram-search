@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import { useBridgeStore } from '../composables/useBridge'
+import { useChatStore } from './useChat'
 import { useMessageStore } from './useMessage'
 
 export const useAccountStore = defineStore('account', () => {
@@ -40,6 +41,8 @@ export const useAccountStore = defineStore('account', () => {
 
     if (session?.isReady || !session?.session) {
       logger.verbose('No need to login', { session })
+
+      useChatStore().fetchChats()
       return
     }
 
