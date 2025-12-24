@@ -10,7 +10,7 @@ import { useBridgeStore } from '../composables/useBridge'
 
 export const useChatStore = defineStore('chat', () => {
   const bridgeStore = useBridgeStore()
-  const allChats = useLocalStorage<Record<string, CoreDialog[]>>('chat/chats', {})
+  const allChats = useLocalStorage<Record<string, CoreDialog[]>>('v2/chat/chats', {})
 
   const chats = computed({
     get: () => {
