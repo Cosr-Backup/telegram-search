@@ -3,7 +3,7 @@
 import type { CoreDB } from '../db'
 import type { CoreDialog } from '../types/dialog'
 import type { PromiseResult } from '../utils/result'
-import type { DBSelectChat } from './utils/types'
+import type { DBSelectChat, DBSelectChatWithAccount } from './utils/types'
 
 import { and, desc, eq, sql } from 'drizzle-orm'
 
@@ -43,11 +43,22 @@ async function recordChats(db: CoreDB, chats: CoreDialog[], accountId: string): 
     if (accountId && joinedChats.length > 0) {
       await tx
         .insert(accountJoinedChatsTable)
-        .values(joinedChats.map(chat => ({
-          account_id: accountId,
-          joined_chat_id: chat.id,
-        })))
-        .onConflictDoNothing()
+        .values(joinedChats.map((chat) => {
+          const originalChat = chats.find(c => c.id.toString() === chat.chat_id)
+          return {
+            account_id: accountId,
+            joined_chat_id: chat.id,
+            is_pinned: originalChat?.pinned || false,
+            access_hash: originalChat?.accessHash,
+          }
+        }))
+        .onConflictDoUpdate({
+          target: [accountJoinedChatsTable.account_id, accountJoinedChatsTable.joined_chat_id],
+          set: {
+            is_pinned: sql`excluded.is_pinned`,
+            access_hash: sql`excluded.access_hash`,
+          },
+        })
     }
 
     return joinedChats
@@ -68,7 +79,7 @@ async function fetchChats(db: CoreDB): PromiseResult<DBSelectChat[]> {
 /**
  * Fetch chats for a specific account
  */
-async function fetchChatsByAccountId(db: CoreDB, accountId: string): PromiseResult<DBSelectChat[]> {
+async function fetchChatsByAccountId(db: CoreDB, accountId: string): PromiseResult<DBSelectChatWithAccount[]> {
   return withResult(() => db
     .select({
       id: joinedChatsTable.id,
@@ -77,6 +88,8 @@ async function fetchChatsByAccountId(db: CoreDB, accountId: string): PromiseResu
       chat_name: joinedChatsTable.chat_name,
       chat_type: joinedChatsTable.chat_type,
       dialog_date: joinedChatsTable.dialog_date,
+      access_hash: accountJoinedChatsTable.access_hash,
+      is_pinned: accountJoinedChatsTable.is_pinned,
       created_at: joinedChatsTable.created_at,
       updated_at: joinedChatsTable.updated_at,
     })
@@ -86,7 +99,7 @@ async function fetchChatsByAccountId(db: CoreDB, accountId: string): PromiseResu
       eq(joinedChatsTable.id, accountJoinedChatsTable.joined_chat_id),
     )
     .where(eq(accountJoinedChatsTable.account_id, accountId))
-    .orderBy(desc(joinedChatsTable.dialog_date)),
+    .orderBy(desc(accountJoinedChatsTable.is_pinned), desc(joinedChatsTable.dialog_date)),
   )
 }
 

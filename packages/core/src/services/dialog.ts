@@ -53,6 +53,7 @@ export function createDialogService(ctx: CoreContext, logger: Logger) {
         let lastMessage: string | undefined
         let lastMessageDate: Date | undefined
         const unreadCount = dialog.unreadCount
+        const pinned = dialog.pinned || false
 
         if ('participantsCount' in dialog.entity) {
           messageCount = dialog.entity.participantsCount || 0
@@ -73,6 +74,8 @@ export function createDialogService(ctx: CoreContext, logger: Logger) {
           lastMessageDate,
           avatarFileId: result.avatarFileId,
           avatarUpdatedAt: result.avatarUpdatedAt,
+          pinned,
+          accessHash: result.accessHash,
         })
       }
 
