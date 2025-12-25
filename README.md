@@ -108,6 +108,8 @@ docker compose -f docker-compose.yml up -d
 > [!IMPORTANT]
 > AI Embedding & LLM 设置现在在应用内**按账户**配置（设置 → API）。
 >
+> PGLite 因为性能原因，未来会被弃用，推荐使用 PostgreSQL。
+>
 > 请在修改完成 `.env` 文件后，再次执行 `docker compose -f docker-compose.yml up -d` 启动服务。
 
 | 环境变量                      | 说明                                                                         | 示例值                                                |
