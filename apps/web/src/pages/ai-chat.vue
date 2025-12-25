@@ -260,7 +260,6 @@ onMounted(() => {
     <!-- Header -->
     <header class="flex items-center justify-between border-b bg-card/50 px-6 py-4 backdrop-blur-sm">
       <div class="flex items-center gap-3">
-        <span class="i-lucide-message-square-text h-5 w-5 text-primary" />
         <h1 class="text-lg font-semibold">
           {{ t('aiChat.aiChat') }}
         </h1>

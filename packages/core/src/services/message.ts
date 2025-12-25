@@ -8,6 +8,8 @@ import { Api } from 'telegram'
 
 export type MessageService = ReturnType<typeof createMessageService>
 
+const MAX_UNREAD_MESSAGES_LIMIT = 1000
+
 export function createMessageService(ctx: CoreContext, logger: Logger) {
   logger = logger.withContext('core:message:service')
 
@@ -142,7 +144,7 @@ export function createMessageService(ctx: CoreContext, logger: Logger) {
 
       // 3. Pull history
       // We use client.getMessages which handles pagination automatically to reach the 'limit'.
-      const limit = Math.min(opts?.limit || 1000, unreadCount)
+      const limit = Math.min(opts?.limit || MAX_UNREAD_MESSAGES_LIMIT, unreadCount)
 
       logger.withFields({
         chatId,
