@@ -45,32 +45,36 @@
 
 ![Sponsors](https://github.com/luoling8192/luoling8192/raw/master/sponsorkit/sponsors.svg)
 
-## ✅ Features
+## ✅ Feature Highlights
 
 ### 📦 Export & Backup
-- [x] Export chat history to both PGlite and PostgreSQL databases
-- [x] Automatically export media to MinIO object storage
-- [x] Messages are embedded and tokenized on export
-- [x] Real-time sync always pulls the newest conversations
+- [x] Export chat history to multiple database types: supports both PGlite and PostgreSQL
+- [x] Media files are automatically backed up to MinIO object storage—no manual steps required
+- [x] Automatic vector embedding and tokenization during export for precise future search
+- [x] Real-time sync keeps all conversations updated continuously
 
-### 🔍 Chat History Search
-- [x] Smart word segmentation and multilingual search
-- [x] Fuzzy and vector-based semantic searching for better results
-- [x] RAG AI Q&A: Chat with an AI directly, contextual to your chat history
+### 🔍 Chat Record Search
+- [x] Intelligent word segmentation for accurate, multilingual retrieval
+- [x] Combines fuzzy matching with vector-based semantic search for highly efficient results
+- [x] RAG-powered AI Q&A: Chat with AI using your Telegram history as real-time context
+
+### 🚀 Advanced Features
+- [x] Smart unread message summaries: Instantly aggregate all unread content with a concise AI-generated summary
 
 ## 🛣️ Roadmap
 
-### 🧠 AI-powered Features
-- [ ] Auto-generate conversation summaries
-- [ ] "Super Brain": Automatically extract people and event knowledge graphs from chat history
+### 🧠 Enhanced AI Capabilities
+- [ ] Automatic session summaries
+- [ ] "Super Brain": Build knowledge graphs of people and events directly from your chat records
 
-### 🔗 Media & Link Features
-- [ ] Organize "Saved Messages" intelligently for easier management
-- [ ] Deep link & image indexing: Web summarization, image OCR, captioning—enabling search & organization
+### 🔗 Media & Link Extensions
+- [ ] Intelligently organize your "Saved Messages" for efficient content management
+- [ ] Deep link and image indexing: web page summarization, OCR for images, AI-driven captions—powerful search & archival
 
-### 🌐 Multi-platform Expansion
-- [ ] Telegram Bot support for advanced scenarios
-- [ ] Extend to Discord and other platforms for unified cross-platform searching and backups
+### 🌐 Multi-platform Integration
+- [ ] Add Telegram Bot support for versatile message management
+- [ ] Expand to Discord and other major social/messaging platforms for unified search and backup
+
 
 ## 🎉 Try It Now
 
