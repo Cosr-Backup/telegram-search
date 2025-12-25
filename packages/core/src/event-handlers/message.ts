@@ -7,6 +7,7 @@ import { Api } from 'telegram/tl'
 import { v4 as uuidv4 } from 'uuid'
 
 import { MESSAGE_PROCESS_BATCH_SIZE } from '../constants'
+import { convertToCoreMessage } from '../utils/message'
 
 export function registerMessageEventHandlers(ctx: CoreContext, logger: Logger) {
   logger = logger.withContext('core:message:event')
@@ -126,6 +127,27 @@ export function registerMessageEventHandlers(ctx: CoreContext, logger: Logger) {
         logger.withError(error as Error).warn('Failed to re-process messages')
         ctx.withError(error as Error, 'Failed to re-process messages')
       }
+    })
+
+    ctx.emitter.on('message:fetch:unread', async ({ chatId, limit, startTime }) => {
+      logger.withFields({ chatId, limit, startTime }).verbose('Fetching unread messages')
+      try {
+        const messages = await messageService.fetchUnreadMessages(chatId, { limit, startTime })
+        // Reverse to have chronological order (oldest first) which is better for LLM summary
+        // getMessages usually returns newest first.
+        messages.reverse()
+
+        const coreMessages = messages.map(convertToCoreMessage).map(result => result.unwrap())
+        ctx.emitter.emit('message:unread-data', { messages: coreMessages })
+      }
+      catch (e) {
+        ctx.withError(e, 'Failed to fetch unread messages')
+      }
+    })
+
+    ctx.emitter.on('message:read', async ({ chatId }) => {
+      logger.withFields({ chatId }).verbose('Marking messages as read')
+      await messageService.markAsRead(chatId)
     })
   }
 }
