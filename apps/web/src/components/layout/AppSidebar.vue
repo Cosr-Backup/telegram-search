@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { useBridgeStore } from '@tg-search/client'
+import { useAccountStore, useSessionStore } from '@tg-search/client'
 import { useDark } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -13,7 +14,8 @@ import UserDropdown from './UserDropdown.vue'
 import { Button } from '../ui/Button'
 
 const { t } = useI18n()
-const websocketStore = useBridgeStore()
+const accountStore = useAccountStore()
+const { activeSession } = storeToRefs(useSessionStore())
 const isDark = useDark()
 
 const searchParams = ref('')
@@ -76,17 +78,17 @@ const userDropdownOpen = ref(false)
         >
           <div class="h-8 w-8 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
             <EntityAvatar
-              v-if="websocketStore.activeSession?.me?.id != null"
-              :id="websocketStore.activeSession?.me?.id!"
+              v-if="activeSession?.me?.id != null"
+              :id="activeSession?.me?.id!"
               entity="self"
               entity-type="user"
-              :name="websocketStore.activeSession?.me?.name"
+              :name="activeSession?.me?.name"
               size="sm"
             />
           </div>
           <div class="min-w-0 flex flex-1 flex-col">
-            <span class="truncate text-sm font-medium">{{ websocketStore.activeSession?.me?.name }}</span>
-            <span class="truncate text-xs text-muted-foreground">{{ websocketStore.activeSession?.isReady ? t('settings.connected') : t('settings.disconnected') }}</span>
+            <span class="truncate text-sm font-medium">{{ activeSession?.me?.name }}</span>
+            <span class="truncate text-xs text-muted-foreground">{{ accountStore.isReady ? t('settings.connected') : t('settings.disconnected') }}</span>
           </div>
           <div class="i-lucide-chevron-up h-4 w-4 shrink-0 text-muted-foreground" />
         </div>

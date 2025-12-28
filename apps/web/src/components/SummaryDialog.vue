@@ -5,7 +5,7 @@ import type { LLMMessage } from '../composables/useAIChat'
 
 import MarkdownRender from 'markstream-vue'
 
-import { useAccountStore, useBridgeStore } from '@tg-search/client'
+import { useAccountStore, useBridge } from '@tg-search/client'
 import { useDateFormat } from '@vueuse/core'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -28,7 +28,7 @@ const { t } = useI18n()
 const router = useRouter()
 
 const isOpen = ref(false)
-const bridge = useBridgeStore()
+const bridge = useBridge()
 const account = useAccountStore()
 const aiChatLogic = useAIChatLogic()
 const summarizeStore = useSummarizeStore()

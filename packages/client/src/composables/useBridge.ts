@@ -1,17 +1,14 @@
-import type { WsEventToServer, WsEventToServerData, WsMessageToServer } from '@tg-search/server/types'
+import type { BridgeAdapter } from '../types/bridge'
 
 import { IS_CORE_MODE } from '../../constants'
-import { useCoreBridgeStore } from '../adapters/core-bridge'
-import { useWebsocketStore } from '../adapters/websocket'
+import { useCoreBridgeAdapter } from '../adapters/core-bridge'
+import { useWebsocketAdapter } from '../adapters/websocket'
 
-export type ClientSendEventFn = <T extends keyof WsEventToServer>(event: T, data?: WsEventToServerData<T>) => void
-export type ClientCreateWsMessageFn = <T extends keyof WsEventToServer>(event: T, data?: WsEventToServerData<T>) => WsMessageToServer
-
-export function useBridgeStore() {
+export function useBridge(): BridgeAdapter {
   if (IS_CORE_MODE) {
-    return useCoreBridgeStore()
+    return useCoreBridgeAdapter()
   }
   else {
-    return useWebsocketStore()
+    return useWebsocketAdapter()
   }
 }

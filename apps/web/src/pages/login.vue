@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAccountStore, useAvatarStore, useBridgeStore } from '@tg-search/client'
+import { useAccountStore, useAvatarStore, useSessionStore } from '@tg-search/client'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -15,9 +15,9 @@ const router = useRouter()
 const route = useRoute()
 
 const accountStore = useAccountStore()
-const websocketStore = useBridgeStore()
+const { activeSession } = storeToRefs(useSessionStore())
 const avatarStore = useAvatarStore()
-const { isLoggedIn } = storeToRefs(accountStore)
+const { isReady } = storeToRefs(accountStore)
 
 const state = ref({
   currentStep: 'phone' as LoginStep,
@@ -50,16 +50,15 @@ watch(() => accountStore.auth.needPassword, (value) => {
   }
 })
 
-watch(isLoggedIn, (value) => {
+watch(isReady, (value) => {
   if (value) {
     accountStore.auth.isLoading = false
     state.value.currentStep = 'complete'
 
     // High-priority fetch for self avatar to avoid being queued behind chat list
-    const me = websocketStore.activeSession?.me
-    if (me && me.id) {
+    if (activeSession.value?.me && activeSession.value?.me?.id) {
       // Force refresh to always get the latest avatar on login
-      avatarStore.ensureUserAvatar(me.id, undefined, true)
+      avatarStore.ensureUserAvatar(activeSession.value.me.id, undefined, true)
     }
   }
 })

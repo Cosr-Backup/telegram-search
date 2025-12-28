@@ -1,4 +1,4 @@
-import type { StoredSession } from '../types/session'
+import type { CoreUserEntity } from '@tg-search/core'
 
 import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
@@ -10,9 +10,14 @@ import { IS_CORE_MODE } from '../../constants'
 const CORE_TYPE = 'core-bridge'
 const WS_TYPE = 'websocket'
 
+export interface StoredSession {
+  uuid: string
+  me?: CoreUserEntity
+  session?: string
+  type?: 'websocket' | 'core-bridge'
+}
+
 export const useSessionStore = defineStore('session', () => {
-  // Separate keys for core-bridge (browser) and websocket (server) modes
-  // to avoid session pollution between environments.
   const type = IS_CORE_MODE ? CORE_TYPE : WS_TYPE
   const sessionKey = `v2/${type}/sessions`
   const activeIdKey = `v2/${type}/active-session-id`
@@ -20,8 +25,8 @@ export const useSessionStore = defineStore('session', () => {
   const sessions = useLocalStorage<Record<string, StoredSession>>(sessionKey, {})
   const activeSessionId = useLocalStorage<string | null>(activeIdKey, null)
 
-  const _createSession = (uuid: string): StoredSession => {
-    return { uuid, type: type as any }
+  const createSession = (uuid: string): StoredSession => {
+    return { uuid, type }
   }
 
   const ensureSessionInvariants = () => {
@@ -31,7 +36,7 @@ export const useSessionStore = defineStore('session', () => {
     const keys = Object.keys(sessions.value)
     if (keys.length === 0) {
       const id = uuidv4()
-      sessions.value = { [id]: _createSession(id) }
+      sessions.value = { [id]: createSession(id) }
       activeSessionId.value = id
       return
     }
@@ -40,9 +45,6 @@ export const useSessionStore = defineStore('session', () => {
       activeSessionId.value = keys[0]
   }
 
-  /**
-   * Writable computed for the currently active session.
-   */
   const activeSession = computed({
     get: () => {
       if (!activeSessionId.value)
@@ -59,25 +61,16 @@ export const useSessionStore = defineStore('session', () => {
     },
   })
 
-  /**
-   * Create a brand new slot and switch to it.
-   */
   const addNewAccount = () => {
     const newId = uuidv4()
     sessions.value = {
       ...sessions.value,
-      [newId]: _createSession(newId),
+      [newId]: createSession(newId),
     }
-
     activeSessionId.value = newId
-
     return newId
   }
 
-  /**
-   * Remove the current active account slot, adjusting the active index.
-   * Returns true if a slot was removed, false otherwise.
-   */
   const removeCurrentAccount = () => {
     const id = activeSessionId.value
     if (!id || !sessions.value[id])
@@ -94,8 +87,25 @@ export const useSessionStore = defineStore('session', () => {
     else {
       activeSessionId.value = keys[0]
     }
-
     return true
+  }
+
+  const switchAccount = (sessionId: string) => {
+    if (sessions.value[sessionId]) {
+      activeSessionId.value = sessionId
+    }
+  }
+
+  const updateSession = (sessionId: string, data: Partial<StoredSession>) => {
+    if (sessions.value[sessionId]) {
+      sessions.value = {
+        ...sessions.value,
+        [sessionId]: {
+          ...sessions.value[sessionId],
+          ...data,
+        },
+      }
+    }
   }
 
   const cleanup = () => {
@@ -103,13 +113,20 @@ export const useSessionStore = defineStore('session', () => {
     activeSessionId.value = null
   }
 
+  const init = () => {
+    ensureSessionInvariants()
+  }
+
   return {
+    init,
     sessions,
     activeSessionId,
     activeSession,
     ensureSessionInvariants,
     addNewAccount,
     removeCurrentAccount,
+    switchAccount,
+    updateSession,
     cleanup,
   }
 })

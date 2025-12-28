@@ -3,7 +3,7 @@ import type { SyncOptions } from '@tg-search/core'
 
 import NProgress from 'nprogress'
 
-import { getErrorMessage, useAccountStore, useBridgeStore, useChatStore, useSyncTaskStore } from '@tg-search/client'
+import { getErrorMessage, useBridge, useChatStore, useSyncTaskStore } from '@tg-search/client'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -25,9 +25,7 @@ const syncOptions = ref<SyncOptions>({
   maxMediaSize: 0,
 })
 
-const accountStore = useAccountStore()
-const { isLoggedIn } = storeToRefs(accountStore)
-const websocketStore = useBridgeStore()
+const bridge = useBridge()
 
 const chatsStore = useChatStore()
 const { chats, folders } = storeToRefs(chatsStore)
@@ -78,7 +76,7 @@ const shouldShowTaskStatus = computed(() => {
 
 // Disable buttons during sync or when no chats selected
 const isButtonDisabled = computed(() => {
-  return selectedChats.value.length === 0 || !isLoggedIn.value || isTaskInProgress.value
+  return selectedChats.value.length === 0 || isTaskInProgress.value
 })
 
 /**
@@ -86,7 +84,7 @@ const isButtonDisabled = computed(() => {
  * Disabled when: not logged in, a task is in progress, or no chats.
  */
 const isSelectAllDisabled = computed(() => {
-  return !isLoggedIn.value || isTaskInProgress.value || chats.value.length === 0
+  return isTaskInProgress.value || chats.value.length === 0
 })
 
 /**
@@ -184,7 +182,7 @@ const localizedTaskMessage = computed(() => {
 
 function handleSync() {
   increase.value = true
-  websocketStore.sendEvent('takeout:run', {
+  bridge.sendEvent('takeout:run', {
     chatIds: selectedChats.value.map(id => id.toString()),
     increase: true,
     syncOptions: syncOptions.value,
@@ -195,7 +193,7 @@ function handleSync() {
 
 function handleResync() {
   increase.value = false
-  websocketStore.sendEvent('takeout:run', {
+  bridge.sendEvent('takeout:run', {
     chatIds: selectedChats.value.map(id => id.toString()),
     increase: false,
     syncOptions: syncOptions.value,
@@ -206,7 +204,7 @@ function handleResync() {
 
 function handleAbort() {
   if (currentTask.value) {
-    websocketStore.sendEvent('takeout:task:abort', {
+    bridge.sendEvent('takeout:task:abort', {
       taskId: currentTask.value.taskId,
     })
   }
@@ -247,7 +245,7 @@ watch(activeChatId, (chatId) => {
   }
 
   chatStatsLoading.value = true
-  websocketStore.sendEvent('takeout:stats:fetch', {
+  bridge.sendEvent('takeout:stats:fetch', {
     chatId: chatId.toString(),
   })
 })
