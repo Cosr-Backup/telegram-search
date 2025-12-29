@@ -9,7 +9,10 @@ export default defineConfig({
       'apps/server',
       'apps/web',
     ],
+    environment: 'happy-dom',
     coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'lcov'],
       include: [
         'packages/**/src/**/*.ts',
       ],
