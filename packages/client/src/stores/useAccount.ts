@@ -36,14 +36,13 @@ export const useAccountStore = defineStore('account', () => {
    * Best-effort auto-login using stored Telegram session string.
    */
   const attemptLogin = async () => {
+    if (!sessionStore.activeSession?.session) {
+      logger.verbose('No session, skipping login')
+      return
+    }
+
     if (isReady.value) {
-      if (!sessionStore.activeSession?.session) {
-        logger.verbose('No session, skipping login')
-        return
-      }
-
       logger.verbose('Account is ready, fetching dialogs')
-
       useChatStore().fetchStorageDialogs()
       return
     }
