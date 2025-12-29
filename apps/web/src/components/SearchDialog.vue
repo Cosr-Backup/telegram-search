@@ -81,7 +81,7 @@ watch(keywordDebounced, (newKeyword) => {
     >
       <div class="h-full w-full flex flex-col overflow-hidden border-0 rounded-none bg-card shadow-2xl backdrop-blur-xl md:h-auto md:border dark:border-gray-700 md:rounded-2xl dark:bg-gray-800/95" @click.stop>
         <!-- Search input box -->
-        <div class="border-b from-background/50 to-background bg-gradient-to-b p-4 dark:border-gray-700 md:p-6">
+        <div class="bg-linear-to-b border-b from-background/50 to-background p-4 dark:border-gray-700 md:p-6">
           <div class="flex items-center gap-3">
             <button
               class="flex shrink-0 items-center justify-center rounded-full p-2 transition-colors hover:bg-accent md:hidden"
