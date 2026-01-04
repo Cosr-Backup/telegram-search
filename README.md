@@ -104,7 +104,7 @@ curl -L https://raw.githubusercontent.com/groupultra/telegram-search/refs/heads/
 docker compose -f docker-compose.yml up -d
 ```
 
-1. 然后打开 **http://localhost:3333** 即可使用 🎉
+3. 然后打开 **http://localhost:3333** 即可使用 🎉
 
 ### 自定义环境变量
 
