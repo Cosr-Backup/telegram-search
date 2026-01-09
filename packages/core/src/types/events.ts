@@ -155,6 +155,10 @@ export interface DialogEventFromCore {
 
 export interface EntityEventToCore {
   /**
+   * Internal event to process multiple users/chats and save them to cache/DB.
+   */
+  'entity:process': (data: { users: Api.TypeUser[], chats: Api.TypeChat[] }) => void
+  /**
    * Lazy fetch of a user's avatar by userId. Core should respond with 'entity:avatar:data'.
    * Optional fileId allows core to check cache before fetching.
    */
@@ -271,6 +275,11 @@ export interface SyncOptions {
   // Message ID range for sync
   minMessageId?: number
   maxMessageId?: number
+
+  // Anti-ban / Performance flags
+  skipMedia?: boolean
+  skipEmbedding?: boolean
+  skipJieba?: boolean
 }
 
 export interface TakeoutEventToCore {
@@ -330,7 +339,7 @@ export interface TakeoutOpts {
 export interface GramEventsEventToCore {}
 
 export interface GramEventsEventFromCore {
-  'gram:message:received': (data: { message: Api.Message }) => void
+  'gram:message:received': (data: { message: Api.Message, pts?: number, date?: number, isChannel: boolean }) => void
 }
 
 // ============================================================================
@@ -362,6 +371,19 @@ export interface MessageResolverEventToCore {
 export interface MessageResolverEventFromCore {}
 
 // ============================================================================
+// Sync Events (PTS/QTS State Machine)
+// ============================================================================
+
+export interface SyncEventToCore {
+  'sync:catch-up': () => void
+  'sync:reset': () => void
+}
+
+export interface SyncEventFromCore {
+  'sync:status': (data: { status: 'idle' | 'syncing' | 'error', progress?: number }) => void
+}
+
+// ============================================================================
 // Aggregated Event Types
 // ============================================================================
 
@@ -377,6 +399,7 @@ export type FromCoreEvent = ClientInstanceEventFromCore
   & AccountSettingsEventFromCore
   & GramEventsEventFromCore
   & MessageResolverEventFromCore
+  & SyncEventFromCore
 
 export type ToCoreEvent = ClientInstanceEventToCore
   & MessageEventToCore
@@ -389,6 +412,7 @@ export type ToCoreEvent = ClientInstanceEventToCore
   & AccountSettingsEventToCore
   & GramEventsEventToCore
   & MessageResolverEventToCore
+  & SyncEventToCore
 
 export type CoreEvent = FromCoreEvent & ToCoreEvent
 

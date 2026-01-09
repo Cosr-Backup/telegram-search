@@ -2,7 +2,7 @@ import type { CoreDB } from '../db'
 import type { PromiseResult } from '../utils/result'
 import type { DBSelectAccount } from './utils/types'
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 import { accountsTable } from '../schemas/accounts'
 import { withResult } from '../utils/result'
@@ -61,10 +61,78 @@ async function findAccountByUUID(db: CoreDB, uuid: string): PromiseResult<DBSele
   })
 }
 
+/**
+ * Update the sync state for an account.
+ * Fields pts, qts, seq, and date are updated using GREATEST() to ensure
+ * they only move forward.
+ */
+export interface AccountStateUpdate {
+  pts?: number
+  qts?: number
+  seq?: number
+  date?: number
+  lastSyncAt?: number
+}
+
+async function updateAccountState(
+  db: CoreDB,
+  accountId: string,
+  state: AccountStateUpdate,
+): PromiseResult<DBSelectAccount> {
+  return withResult(async () => {
+    const updateSet: Partial<Record<keyof DBSelectAccount, any>> = {
+      updated_at: Date.now(),
+    }
+
+    if (state.lastSyncAt !== undefined) {
+      updateSet.last_sync_at = state.lastSyncAt
+    }
+
+    const fields = ['pts', 'qts', 'seq', 'date'] as const
+    for (const field of fields) {
+      if (state[field] !== undefined) {
+        updateSet[field] = sql`GREATEST(${accountsTable[field]}, ${state[field]})`
+      }
+    }
+
+    const rows = await db
+      .update(accountsTable)
+      .set(updateSet)
+      .where(eq(accountsTable.id, accountId))
+      .returning()
+    return must0(rows)
+  })
+}
+
+/**
+ * Force update the sync state for an account without monotonic checks.
+ * Used for resets or specific bootstrapping scenarios.
+ */
+async function forceUpdateAccountState(
+  db: CoreDB,
+  accountId: string,
+  state: AccountStateUpdate,
+): PromiseResult<DBSelectAccount> {
+  return withResult(async () => {
+    const rows = await db
+      .update(accountsTable)
+      .set({
+        ...state,
+        last_sync_at: state.lastSyncAt,
+        updated_at: Date.now(),
+      })
+      .where(eq(accountsTable.id, accountId))
+      .returning()
+    return must0(rows)
+  })
+}
+
 export const accountModels = {
   recordAccount,
   findAccountByPlatformId,
   findAccountByUUID,
+  updateAccountState,
+  forceUpdateAccountState,
 }
 
 export type AccountModels = typeof accountModels
