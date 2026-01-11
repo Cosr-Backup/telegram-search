@@ -6,7 +6,6 @@ import type { MediaBinaryProvider } from '../types/storage'
 
 import { useLogger } from '@guiiai/logg'
 
-import { useService } from '../context'
 import { useMessageResolverRegistry } from '../message-resolvers'
 import { createAvatarResolver } from '../message-resolvers/avatar-resolver'
 import { createEmbeddingResolver } from '../message-resolvers/embedding-resolver'
@@ -47,13 +46,13 @@ export function basicEventHandler(ctx: CoreContext, config: Config, mediaBinaryP
 
   const registry = useMessageResolverRegistry(logger)
 
-  const connectionService = useService(ctx, logger, createConnectionService)({
+  const connectionService = createConnectionService(ctx, logger, {
     apiId: Number(config.api.telegram.apiId!),
     apiHash: config.api.telegram.apiHash!,
     proxy: config.api.telegram.proxy,
   })
-  const configService = useService(ctx, logger, createAccountSettingsService)
-  const messageResolverService = useService(ctx, logger, createMessageResolverService)(registry)
+  const configService = createAccountSettingsService(ctx, logger)
+  const messageResolverService = createMessageResolverService(ctx, logger, registry)
 
   registry.register('media', createMediaResolver(ctx, logger, photoModels, stickerModels, mediaBinaryProvider))
   registry.register('user', createUserResolver(ctx, logger, userModels))
@@ -81,13 +80,13 @@ export function basicEventHandler(ctx: CoreContext, config: Config, mediaBinaryP
 export function afterConnectedEventHandler(ctx: CoreContext): EventHandler {
   let logger = useLogger()
 
-  const accountService = useService(ctx, logger, createAccountService)
-  const entityService = useService(ctx, logger, createEntityService)
+  const accountService = createAccountService(ctx, logger)
+  const entityService = createEntityService(ctx, logger)
   const messageService = createMessageService(ctx, logger, entityService)
-  const dialogService = useService(ctx, logger, createDialogService)
-  const takeoutService = useService(ctx, logger, createTakeoutService)
-  const syncService = useService(ctx, logger, createSyncService)
-  const gramEventsService = useService(ctx, logger, createGramEventsService)
+  const dialogService = createDialogService(ctx, logger)
+  const takeoutService = createTakeoutService(ctx, logger)
+  const syncService = createSyncService(ctx, logger)
+  const gramEventsService = createGramEventsService(ctx, logger)
 
   ctx.emitter.once('auth:connected', async () => {
     // Register entity handlers first so we can establish currentAccountId.
