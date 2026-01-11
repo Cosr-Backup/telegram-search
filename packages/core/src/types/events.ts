@@ -186,6 +186,7 @@ export interface EntityEventFromCore {
 export interface CoreBaseEntity {
   id: string
   name: string
+  accessHash?: string
 }
 
 export interface CoreUserEntity extends CoreBaseEntity {

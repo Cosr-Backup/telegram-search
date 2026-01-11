@@ -2,6 +2,7 @@ import type { Logger } from '@guiiai/logg'
 
 import type { CoreContext } from '../context'
 import type { FetchMessageOpts } from '../types/events'
+import type { EntityService } from './entity'
 
 import { withSpan } from '@tg-search/observability'
 import { Err, Ok } from '@unbird/result'
@@ -13,7 +14,7 @@ const MAX_UNREAD_MESSAGES_LIMIT = 1000
 const MAX_SUMMARY_MESSAGES_LIMIT = 1000
 const SUMMARY_FETCH_BATCH_SIZE = 100
 
-export function createMessageService(ctx: CoreContext, logger: Logger) {
+export function createMessageService(ctx: CoreContext, logger: Logger, entityService: EntityService) {
   logger = logger.withContext('core:message:service')
 
   function isValidApiMessage(message: Api.TypeMessage): message is Api.Message {
@@ -42,7 +43,9 @@ export function createMessageService(ctx: CoreContext, logger: Logger) {
 
     try {
       logger.withFields({ limit }).debug('Fetching messages from Telegram server')
-      const messages = await ctx.getClient().getMessages(chatId, {
+      // Resolve peer using our DB-backed helper to ensure correct accessHash
+      const peer = await entityService.getInputPeer(chatId)
+      const messages = await ctx.getClient().getMessages(peer, {
         limit,
         minId,
         maxId,
@@ -70,9 +73,10 @@ export function createMessageService(ctx: CoreContext, logger: Logger) {
   async function sendMessage(chatId: string, content: string) {
     return withSpan('core:message:service:sendMessage', async () => {
       // This works for simple text messages. For more types, use GramJS's raw constructors.
+      const peer = await entityService.getInputPeer(chatId)
       const message = await ctx.getClient().invoke(
         new Api.messages.SendMessage({
-          peer: chatId,
+          peer,
           message: content,
         }),
       )
@@ -95,7 +99,8 @@ export function createMessageService(ctx: CoreContext, logger: Logger) {
         logger.withFields({ chatId, count: messageIds.length }).debug('Fetching specific messages from Telegram')
 
         // Telegram API getMessages can accept an array of message IDs
-        const messages = await ctx.getClient().getMessages(chatId, {
+        const peer = await entityService.getInputPeer(chatId)
+        const messages = await ctx.getClient().getMessages(peer, {
           ids: messageIds,
         })
 
@@ -126,7 +131,7 @@ export function createMessageService(ctx: CoreContext, logger: Logger) {
 
       try {
         // 1. Resolve Peer
-        const peer = await ctx.getClient().getInputEntity(chatId)
+        const peer = await entityService.getInputPeer(chatId)
 
         // 2. Get dialog metadata to locate read inbox boundary
         const peerDialogs = await ctx.getClient().invoke(
@@ -233,7 +238,7 @@ export function createMessageService(ctx: CoreContext, logger: Logger) {
       const limit = Math.min(opts.limit ?? MAX_SUMMARY_MESSAGES_LIMIT, MAX_SUMMARY_MESSAGES_LIMIT)
       const batchSize = Math.min(SUMMARY_FETCH_BATCH_SIZE, limit)
 
-      const peer = await ctx.getClient().getInputEntity(chatId)
+      const peer = await entityService.getInputPeer(chatId)
 
       const collected: Api.Message[] = []
       let maxId: number | undefined
@@ -293,7 +298,7 @@ export function createMessageService(ctx: CoreContext, logger: Logger) {
 
       try {
         // 1. Resolve Peer
-        const peer = await ctx.getClient().getInputEntity(chatId)
+        const peer = await entityService.getInputPeer(chatId)
 
         // 2. Resolve maxId (the latest message ID to mark as read)
         let maxId = lastMessageId
