@@ -73,7 +73,7 @@
 
 ### 🌐 マルチプラットフォーム対応
 - [ ] Telegram Bot 対応で多様なメッセージ管理を実現
-- [ ] Discord 等他の主要チャット・SNS への拡張で統合検索＆バックアップに対応
+- [ ] Discord 等他の主要チャット・ SNS への拡張で統合検索＆バックアップに対応
 
 ## 🎉 今すぐお試し
 
@@ -88,13 +88,13 @@
 
 ## 🚀 クイックスタート
 
-1. Telegram Search 用のディレクトリを作成:
+1. Telegram Search 用のディレクトリを作成：
 ```bash
 mkdir telegram-search
 cd telegram-search
 ```
 
-2. Docker Compose ファイルと環境ファイルをダウンロードし、全サービス（DB・MinIO等）を起動:
+2. Docker Compose ファイルと環境ファイルをダウンロードし、全サービス（DB ・ MinIO 等）を起動：
 ```bash
 curl -L https://raw.githubusercontent.com/groupultra/telegram-search/refs/heads/main/docker/docker-compose.yml -o docker-compose.yml
 curl -L https://raw.githubusercontent.com/groupultra/telegram-search/refs/heads/main/docker/.env.example -o .env
@@ -118,6 +118,8 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 > PGLite は性能の問題で将来廃止される予定です。PostgreSQL を推奨します。
 >
 > 変更が完了した `.env` ファイルを再度 `docker compose -f docker-compose.yml up -d` で起動してください。
+
+すべての環境変数は省略可能です。指定しない場合、デフォルト値が使用されます。
 
 | 環境変数            | 説明                                                                            | サンプル値                                            |
 | ------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------- |

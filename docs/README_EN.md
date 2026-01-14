@@ -128,6 +128,8 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 >
 > Please restart the service after modifying the `.env` file by running `docker compose -f docker-compose.yml up -d`.
 
+All environment variables are optional. If not provided, the default values will be used.
+
 | Variable            | Description                                                  | Example                                               |
 | ------------------- | ------------------------------------------------------------ | ----------------------------------------------------- |
 | `TELEGRAM_API_ID`   | From [my.telegram.org](https://my.telegram.org/apps)         | `611335`                                              |

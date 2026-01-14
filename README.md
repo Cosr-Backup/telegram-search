@@ -123,6 +123,8 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 >
 > 请在修改完成 `.env` 文件后，再次执行 `docker compose -f docker-compose.yml up -d` 启动服务。
 
+以下环境变量全部为可选，如果不填写，则会使用默认值。
+
 | 环境变量            | 说明                                                                         | 示例值                                                |
 | ------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `TELEGRAM_API_ID`   | 从 [my.telegram.org](https://my.telegram.org/apps) 获取的 Telegram 应用 ID   | `611335`                                              |
