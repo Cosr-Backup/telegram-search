@@ -90,6 +90,8 @@
 
 ## 🚀 快速开始
 
+### 使用 Docker Compose
+
 1. 新建一个空目录，用于存放 Telegram Search 的配置和数据：
 ```bash
 mkdir telegram-search
@@ -105,6 +107,12 @@ docker compose -f docker-compose.yml up -d
 ```
 
 3. 然后打开 **http://localhost:3333** 即可使用 🎉
+
+### 使用 Docker Image
+
+```bash
+docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-search:latest
+```
 
 ### 自定义环境变量
 
@@ -129,6 +137,24 @@ docker compose -f docker-compose.yml up -d
 | `MINIO_ACCESS_KEY`            | MinIO 访问密钥                                                               | `minioadmin`                                          |
 | `MINIO_SECRET_KEY`            | MinIO 访问密钥对应的密钥                                                     | `minioadmin`                                          |
 | `MINIO_BUCKET`                | MinIO 存储桶名称                                                             | `telegram-media`                                      |
+
+
+#### 使用 Docker Image 环境变量
+
+请根据自己的需要自行修改环境变量。
+
+```bash
+docker run -d --name telegram-search \
+  -p 3333:3333 \
+  -e TELEGRAM_API_ID=1234567890 \
+  -e TELEGRAM_API_HASH=1234567890 \
+  -e DATABASE_TYPE=postgres \
+  -e DATABASE_URL=postgresql://postgres:123456@pgvector:5432/postgres \
+  -e PROXY_URL=socks5://user:pass@host:port \
+  -e PORT=3333 \
+  -e HOST=0.0.0.0 \
+  ghcr.io/groupultra/telegram-search:latest
+```
 
 ## 💻 开发指南
 

@@ -104,6 +104,12 @@ docker compose -f docker-compose.yml up -d
 
 3. ブラウザで **http://localhost:3333** にアクセスしてすぐ使い始められます 🎉
 
+### Docker Image を使用してデプロイ
+
+```bash
+docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-search:latest
+```
+
 ### 環境変数のカスタマイズ
 
 > [!IMPORTANT]
@@ -127,6 +133,23 @@ docker compose -f docker-compose.yml up -d
 | `MINIO_ACCESS_KEY`            | MinIO アクセスキー                                                              | `minioadmin`                                          |
 | `MINIO_SECRET_KEY`            | MinIO シークレットキー                                                          | `minioadmin`                                          |
 | `MINIO_BUCKET`                | MinIO のバケット名                                                              | `telegram-media`                                      |
+
+### Docker Image を使用してデプロイ
+
+必要に応じて環境変数を編集してください。
+
+```bash
+docker run -d --name telegram-search \
+  -p 3333:3333 \
+  -e TELEGRAM_API_ID=1234567890 \
+  -e TELEGRAM_API_HASH=1234567890 \
+  -e DATABASE_TYPE=postgres \
+  -e DATABASE_URL=postgresql://postgres:123456@pgvector:5432/postgres \
+  -e PROXY_URL=socks5://user:pass@host:port \
+  -e PORT=3333 \
+  -e HOST=0.0.0.0 \
+  ghcr.io/groupultra/telegram-search:latest
+```
 
 ## 💻 開発ガイド
 

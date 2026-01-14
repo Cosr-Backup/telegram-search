@@ -113,6 +113,12 @@ docker compose -f docker-compose.yml up -d
 
 4. Open **http://localhost:3333** in your browser to start using Telegram Search! 🎉
 
+### Deploy with Docker Image
+
+```bash
+docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-search:latest
+```
+
 ### Environment Variables
 
 > [!IMPORTANT]
@@ -136,6 +142,23 @@ docker compose -f docker-compose.yml up -d
 | `MINIO_ACCESS_KEY`            | MinIO access key                                             | `minioadmin`                                          |
 | `MINIO_SECRET_KEY`            | MinIO secret key                                             | `minioadmin`                                          |
 | `MINIO_BUCKET`                | MinIO bucket name                                            | `telegram-media`                                      |
+
+### Deploy with Docker Image
+
+Please modify the environment variables according to your needs.
+
+```bash
+docker run -d --name telegram-search \
+  -p 3333:3333 \
+  -e TELEGRAM_API_ID=1234567890 \
+  -e TELEGRAM_API_HASH=1234567890 \
+  -e DATABASE_TYPE=postgres \
+  -e DATABASE_URL=postgresql://postgres:123456@pgvector:5432/postgres \
+  -e PROXY_URL=socks5://user:pass@host:port \
+  -e PORT=3333 \
+  -e HOST=0.0.0.0 \
+  ghcr.io/groupultra/telegram-search:latest
+```
 
 ## 💻 Development Guide
 
