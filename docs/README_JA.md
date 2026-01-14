@@ -119,20 +119,20 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 >
 > 変更が完了した `.env` ファイルを再度 `docker compose -f docker-compose.yml up -d` で起動してください。
 
-| 環境変数                      | 説明                                                                            | サンプル値                                            |
-| ----------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `TELEGRAM_API_ID`             | [my.telegram.org](https://my.telegram.org/apps) で取得した Telegram アプリ ID   |                                                       |
-| `TELEGRAM_API_HASH`           | [my.telegram.org](https://my.telegram.org/apps) で取得した Telegram アプリ Hash |                                                       |
-| `DATABASE_TYPE`               | データベース種別。`postgres` または `pglite` を指定                             | `pglite`                                              |
-| `DATABASE_URL`                | PostgreSQL 用接続文字列（`DATABASE_TYPE=postgres`の場合のみ記入）               | `postgresql://postgres:123456@pgvector:5432/postgres` |
-| `PROXY_URL`                   | 利用可能なプロキシ URL（例：`socks5://user:pass@host:port` など）               | `socks5://user:pass@host:port`                        |
-| `PORT`                        | サーバー HTTP/WebSocket のリッスンポート                                        | `3333`                                                |
-| `HOST`                        | サーバーのバインドアドレス                                                      | `0.0.0.0`                                             |
-| `BACKEND_URL`                 | Nginx 等でリバースプロキシを使う場合の上流サーバー URL                          | `http://127.0.0.1:3333`                               |
-| `MINIO_URL`                   | MinIO サービスホスト名または IP                                                 | `minio`                                               |
-| `MINIO_ACCESS_KEY`            | MinIO アクセスキー                                                              | `minioadmin`                                          |
-| `MINIO_SECRET_KEY`            | MinIO シークレットキー                                                          | `minioadmin`                                          |
-| `MINIO_BUCKET`                | MinIO のバケット名                                                              | `telegram-media`                                      |
+| 環境変数            | 説明                                                                            | サンプル値                                            |
+| ------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `TELEGRAM_API_ID`   | [my.telegram.org](https://my.telegram.org/apps) で取得した Telegram アプリ ID   | `611335`                                              |
+| `TELEGRAM_API_HASH` | [my.telegram.org](https://my.telegram.org/apps) で取得した Telegram アプリ Hash | `d524b414d21f4d37f08684c1df41ac9c`                    |
+| `DATABASE_TYPE`     | データベース種別。`postgres` または `pglite` を指定                             | `pglite`                                              |
+| `DATABASE_URL`      | PostgreSQL 用接続文字列（`DATABASE_TYPE=postgres`の場合のみ記入）               | `postgresql://postgres:123456@pgvector:5432/postgres` |
+| `PROXY_URL`         | 利用可能なプロキシ URL（例：`socks5://user:pass@host:port` など）               | `socks5://user:pass@host:port`                        |
+| `PORT`              | サーバー HTTP/WebSocket のリッスンポート                                        | `3333`                                                |
+| `HOST`              | サーバーのバインドアドレス                                                      | `0.0.0.0`                                             |
+| `BACKEND_URL`       | Nginx 等でリバースプロキシを使う場合の上流サーバー URL                          | `http://127.0.0.1:3333`                               |
+| `MINIO_URL`         | MinIO サービスホスト名または IP                                                 | `minio`                                               |
+| `MINIO_ACCESS_KEY`  | MinIO アクセスキー                                                              | `minioadmin`                                          |
+| `MINIO_SECRET_KEY`  | MinIO シークレットキー                                                          | `minioadmin`                                          |
+| `MINIO_BUCKET`      | MinIO のバケット名                                                              | `telegram-media`                                      |
 
 ### Docker Image を使用してデプロイ
 
@@ -141,13 +141,8 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 ```bash
 docker run -d --name telegram-search \
   -p 3333:3333 \
-  -e TELEGRAM_API_ID=1234567890 \
-  -e TELEGRAM_API_HASH=1234567890 \
   -e DATABASE_TYPE=postgres \
-  -e DATABASE_URL=postgresql://postgres:123456@pgvector:5432/postgres \
-  -e PROXY_URL=socks5://user:pass@host:port \
-  -e PORT=3333 \
-  -e HOST=0.0.0.0 \
+  -e DATABASE_URL=postgresql://postgres:123456@localhost:5432/postgres \
   ghcr.io/groupultra/telegram-search:latest
 ```
 

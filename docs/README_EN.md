@@ -128,20 +128,20 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 >
 > Please restart the service after modifying the `.env` file by running `docker compose -f docker-compose.yml up -d`.
 
-| Variable                      | Description                                                  | Example                                               |
-| ----------------------------- | ------------------------------------------------------------ | ----------------------------------------------------- |
-| `TELEGRAM_API_ID`             | From [my.telegram.org](https://my.telegram.org/apps)         |                                                       |
-| `TELEGRAM_API_HASH`           | From [my.telegram.org](https://my.telegram.org/apps)         |                                                       |
-| `DATABASE_TYPE`               | Database type: `postgres` or `pglite`                        | `pglite`                                              |
-| `DATABASE_URL`                | PostgreSQL connection string (`DATABASE_TYPE=postgres` only) | `postgresql://postgres:123456@pgvector:5432/postgres` |
-| `PROXY_URL`                   | Proxy address (formats like `socks5://user:pass@host:port`)  | `socks5://user:pass@host:port`                        |
-| `PORT`                        | Backend HTTP/WebSocket listening port                        | `3333`                                                |
-| `HOST`                        | Backend listening address                                    | `0.0.0.0`                                             |
-| `BACKEND_URL`                 | Upstream backend for Nginx `/api`/`/ws` proxy                | `http://127.0.0.1:3333`                               |
-| `MINIO_URL`                   | MinIO service address                                        | `http://minio:9000`                                   |
-| `MINIO_ACCESS_KEY`            | MinIO access key                                             | `minioadmin`                                          |
-| `MINIO_SECRET_KEY`            | MinIO secret key                                             | `minioadmin`                                          |
-| `MINIO_BUCKET`                | MinIO bucket name                                            | `telegram-media`                                      |
+| Variable            | Description                                                  | Example                                               |
+| ------------------- | ------------------------------------------------------------ | ----------------------------------------------------- |
+| `TELEGRAM_API_ID`   | From [my.telegram.org](https://my.telegram.org/apps)         | `611335`                                              |
+| `TELEGRAM_API_HASH` | From [my.telegram.org](https://my.telegram.org/apps)         | `d524b414d21f4d37f08684c1df41ac9c`                    |
+| `DATABASE_TYPE`     | Database type: `postgres` or `pglite`                        | `pglite`                                              |
+| `DATABASE_URL`      | PostgreSQL connection string (`DATABASE_TYPE=postgres` only) | `postgresql://postgres:123456@pgvector:5432/postgres` |
+| `PROXY_URL`         | Proxy address (formats like `socks5://user:pass@host:port`)  | `socks5://user:pass@host:port`                        |
+| `PORT`              | Backend HTTP/WebSocket listening port                        | `3333`                                                |
+| `HOST`              | Backend listening address                                    | `0.0.0.0`                                             |
+| `BACKEND_URL`       | Upstream backend for Nginx `/api`/`/ws` proxy                | `http://127.0.0.1:3333`                               |
+| `MINIO_URL`         | MinIO service address                                        | `http://minio:9000`                                   |
+| `MINIO_ACCESS_KEY`  | MinIO access key                                             | `minioadmin`                                          |
+| `MINIO_SECRET_KEY`  | MinIO secret key                                             | `minioadmin`                                          |
+| `MINIO_BUCKET`      | MinIO bucket name                                            | `telegram-media`                                      |
 
 ### Deploy with Docker Image
 
