@@ -197,6 +197,13 @@
       "when": 1768116203768,
       "tag": "0027_lush_lethal_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1770312603679,
+      "tag": "0028_flashy_spectrum",
+      "breakpoints": true
     }
   ]
 }
