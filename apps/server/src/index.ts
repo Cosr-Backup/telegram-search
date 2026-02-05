@@ -6,6 +6,7 @@ import process from 'node:process'
 import figlet from 'figlet'
 
 import { initLogger, LoggerFormat, setGlobalHookPostLog, useLogger } from '@guiiai/logg'
+import { createBotRegistry, setBotRegistryInstance } from '@tg-search/bot'
 import { parseEnvFlags, parseEnvToConfig } from '@tg-search/common'
 import { models } from '@tg-search/core'
 import { emitOtelLog } from '@tg-search/observability'
@@ -110,6 +111,15 @@ async function bootstrap() {
 
   setupErrorHandlers(logger)
 
+  // Initialize Grammy bot (non-blocking, no-op if TELEGRAM_BOT_TOKEN not set)
+  const botRegistry = createBotRegistry({
+    config,
+    getDB,
+    logger,
+  })
+  setBotRegistryInstance(botRegistry)
+  await botRegistry.start()
+
   const app = configureServer(logger, flags, config)
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3000
@@ -133,6 +143,7 @@ async function bootstrap() {
 
   const shutdown = async () => {
     logger.log('Shutting down server gracefully...')
+    await botRegistry.stop()
     server.close()
     process.exit(0)
   }

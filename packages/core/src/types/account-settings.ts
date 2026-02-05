@@ -46,9 +46,19 @@ export const messageProcessingSchema = object({
   defaults: optional(syncOptionsSchema, { syncMedia: true, maxMediaSize: 0 }),
 })
 
+export const botConfigSchema = object({
+  enabled: optional(boolean(), false),
+  token: optional(string()),
+  notifyChatId: optional(string()),
+  lastSearchChatId: optional(string()), // Remember last selected chat for search
+})
+
 export const accountSettingsSchema = object({
   embedding: optional(embeddingConfigSchema, {}),
   llm: optional(llmConfigSchema, {}),
+  resolvers: optional(resolversConfigSchema, {}),
+  receiveMessages: optional(receiveMessagesConfigSchema, {}),
+  bot: optional(botConfigSchema, {}),
   messageProcessing: optional(messageProcessingSchema, {}),
 })
 
