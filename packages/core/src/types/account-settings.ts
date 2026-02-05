@@ -30,13 +30,26 @@ export const resolversConfigSchema = object({
 
 export const receiveMessagesConfigSchema = object({
   receiveAll: optional(boolean(), true),
+  downloadMedia: optional(boolean(), true),
+})
+
+export const syncOptionsSchema = object({
+  syncMedia: optional(boolean(), true),
+  maxMediaSize: optional(number(), 0),
+  skipEmbedding: optional(boolean()),
+  skipJieba: optional(boolean()),
+})
+
+export const messageProcessingSchema = object({
+  receiveMessages: optional(receiveMessagesConfigSchema, {}),
+  resolvers: optional(resolversConfigSchema, {}),
+  defaults: optional(syncOptionsSchema, { syncMedia: true, maxMediaSize: 0 }),
 })
 
 export const accountSettingsSchema = object({
   embedding: optional(embeddingConfigSchema, {}),
   llm: optional(llmConfigSchema, {}),
-  resolvers: optional(resolversConfigSchema, {}),
-  receiveMessages: optional(receiveMessagesConfigSchema, {}),
+  messageProcessing: optional(messageProcessingSchema, {}),
 })
 
 export type EmbeddingConfig = InferOutput<typeof embeddingConfigSchema>
