@@ -14,6 +14,7 @@ RUN apk add --no-cache git
 # Copy dependency manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json ./packages/core/package.json
+COPY packages/bot/package.json ./packages/bot/package.json
 COPY packages/common/package.json ./packages/common/package.json
 COPY packages/schema/package.json ./packages/schema/package.json
 COPY packages/client/package.json ./packages/client/package.json
@@ -54,6 +55,7 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
+COPY --from=builder /app/packages/bot/package.json ./packages/bot/package.json
 COPY --from=builder /app/packages/common/package.json ./packages/common/package.json
 COPY --from=builder /app/packages/schema/package.json ./packages/schema/package.json
 COPY --from=builder /app/packages/observability/package.json ./packages/observability/package.json
