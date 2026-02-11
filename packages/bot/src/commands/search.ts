@@ -353,22 +353,22 @@ export function registerSearchCommand(bot: Bot, ctx: BotCommandContext) {
   })
 
   // Handle search query input
-  bot.on('message:text', async (gramCtx) => {
+  bot.on('message:text', async (gramCtx, next) => {
     const userId = gramCtx.from?.id
     if (!userId) {
-      return
+      return next()
     }
 
     const text = gramCtx.message.text
 
     // Skip commands
     if (text.startsWith('/')) {
-      return
+      return next()
     }
 
     const state = userStates.get(userId)
     if (!state) {
-      return
+      return next()
     }
 
     const account = await ctx.resolveAccountByTelegramUserId(userId)
@@ -458,6 +458,7 @@ export function registerSearchCommand(bot: Bot, ctx: BotCommandContext) {
         keyboard.text('❌ End Search', 'action:end_search').row()
 
         await gramCtx.reply(searchResult.text, { reply_markup: keyboard })
+        return
       }
     }
     catch (error) {
