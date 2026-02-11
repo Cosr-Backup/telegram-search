@@ -3,6 +3,7 @@ import type { CoreRetrievalMessages } from '@tg-search/core/types'
 
 import MarkdownRender from 'markstream-vue'
 
+import { useLogger } from '@guiiai/logg'
 import { useAccountStore, useAIChatStore, useBridge, useChatStore } from '@tg-search/client'
 import { CoreEventType } from '@tg-search/core'
 import { storeToRefs } from 'pinia'
@@ -134,9 +135,31 @@ async function generateMessage(message: string, assistantId?: string) {
       })
     }
 
+    const getDialogsExecutor = async (_: any) => {
+      return new Promise<any[]>((resolve) => {
+        bridge.waitForEvent(CoreEventType.StorageDialogs).then(({ dialogs }) => {
+          resolve(dialogs)
+        })
+
+        bridge.sendEvent(CoreEventType.StorageFetchDialogs)
+      })
+    }
+
+    const chatNoteExecutor = async (params: { chatId: string, note: string, modify: boolean }) => {
+      return new Promise<string>((resolve) => {
+        bridge.waitForEvent(CoreEventType.StorageChatNoteData).then(({ note }) => {
+          resolve(note ?? '')
+        })
+
+        bridge.sendEvent(CoreEventType.StorageChatNote, params)
+      })
+    }
+
     // Create tools
     const searchMessagesTool = await aiChatLogic.createSearchMessagesTool(searchMessagesExecutor)
     const retrieveContextTool = await aiChatLogic.createRetrieveContextTool(retrieveContextExecutor)
+    const getDialogsTool = await aiChatLogic.createGetDialogsTool(getDialogsExecutor)
+    const chatNoteTool = await aiChatLogic.createChatNoteTool(chatNoteExecutor)
 
     // Build system prompt
     const systemPrompt = aiChatLogic.buildSystemPrompt()
@@ -165,7 +188,7 @@ async function generateMessage(message: string, assistantId?: string) {
     await aiChatLogic.callLLMWithTools(
       llmConfig,
       llmMessages,
-      [searchMessagesTool, retrieveContextTool],
+      [searchMessagesTool, retrieveContextTool, getDialogsTool, chatNoteTool],
       // onToolCall
       (toolCall) => {
         toolCalls.push(toolCall)
@@ -176,6 +199,13 @@ async function generateMessage(message: string, assistantId?: string) {
         else if (toolCall.name === 'retrieveContext') {
           aiChatStore.setSearching(true, `Retrieving context...`)
         }
+        else if (toolCall.name === 'getDialogs') {
+          aiChatStore.setSearching(true, `Fetching dialogs...`)
+        }
+        else if (toolCall.name === 'chatNote') {
+          aiChatStore.setSearching(true, `Adding note...`)
+        }
+        useLogger('composables:ai-chat').withFields({ toolCall }).log('onToolCall')
       },
       // onToolResult
       (toolName, result, duration) => {
@@ -195,6 +225,7 @@ async function generateMessage(message: string, assistantId?: string) {
           searchQuery: '',
           toolCalls,
         }
+        useLogger('composables:ai-chat').withFields({ toolCalls }).log('onTextDelta')
         aiChatStore.updateAssistantMessage(currentAssistantId, accumulatedContent, allRetrievedMessages, debugInfo)
         // Auto-scroll as content updates
         nextTick().then(scrollToBottom)
