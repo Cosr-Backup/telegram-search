@@ -4,7 +4,12 @@ import type { BotCommandContext } from '.'
 
 import { InlineKeyboard } from 'grammy'
 
-import { getAccountChats } from './helpers'
+import {
+  buildPaginationButtons,
+  buildTelegramMessageLinks,
+  getAccountChats,
+  paginateItems,
+} from './helpers'
 
 const DEFAULT_EMBEDDING_DIMENSION = 1536
 const CHATS_PER_PAGE = 8
@@ -324,13 +329,12 @@ export function registerSearchCommand(bot: Bot, ctx: BotCommandContext) {
       // Build keyboard with pagination
       const keyboard = new InlineKeyboard()
 
-      const navButtons = []
-      if (page > 0) {
-        navButtons.push({ text: '⬅️ Prev Page', callback_data: `resultpage:${page - 1}` })
-      }
-      if (searchResult.hasMore) {
-        navButtons.push({ text: '➡️ Next Page', callback_data: `resultpage:${page + 1}` })
-      }
+      const navButtons = buildPaginationButtons({
+        page,
+        hasMore: searchResult.hasMore,
+        prefix: 'resultpage:',
+        labels: { prev: '⬅️ Prev Page', next: '➡️ Next Page' },
+      })
       if (navButtons.length > 0) {
         keyboard.row(...navButtons)
       }
@@ -439,10 +443,12 @@ export function registerSearchCommand(bot: Bot, ctx: BotCommandContext) {
         const keyboard = new InlineKeyboard()
 
         // Add pagination buttons if needed
-        const navButtons = []
-        if (searchResult.hasMore) {
-          navButtons.push({ text: '➡️ Next Page', callback_data: 'resultpage:1' })
-        }
+        const navButtons = buildPaginationButtons({
+          page: 0,
+          hasMore: searchResult.hasMore,
+          prefix: 'resultpage:',
+          labels: { prev: '⬅️ Prev Page', next: '➡️ Next Page' },
+        })
         if (navButtons.length > 0) {
           keyboard.row(...navButtons)
         }
@@ -477,10 +483,7 @@ async function showChatList(
     keyboard.text('🌐 Search All Chats', 'chat:__ALL__').row()
   }
 
-  const startIdx = page * CHATS_PER_PAGE
-  const endIdx = startIdx + CHATS_PER_PAGE
-  const pageChats = chats.slice(startIdx, endIdx)
-  const totalPages = Math.ceil(chats.length / CHATS_PER_PAGE)
+  const { pageItems: pageChats, totalPages, page: safePage } = paginateItems(chats, page, CHATS_PER_PAGE)
 
   for (const chat of pageChats) {
     const icon = chat.type === 'group' ? '👥' : chat.type === 'channel' ? '📢' : '💬'
@@ -495,13 +498,12 @@ async function showChatList(
 
   // Add pagination buttons
   if (totalPages > 1) {
-    const navButtons = []
-    if (page > 0) {
-      navButtons.push({ text: '⬅️ Prev', callback_data: `chatpage:${page - 1}` })
-    }
-    if (page < totalPages - 1) {
-      navButtons.push({ text: '➡️ Next', callback_data: `chatpage:${page + 1}` })
-    }
+    const navButtons = buildPaginationButtons({
+      page: safePage,
+      hasMore: safePage < totalPages - 1,
+      prefix: 'chatpage:',
+      labels: { prev: '⬅️ Prev', next: '➡️ Next' },
+    })
     if (navButtons.length > 0) {
       keyboard.row(...navButtons)
     }
@@ -510,7 +512,7 @@ async function showChatList(
   // Add back button
   keyboard.text('🔙 Back to Folders', 'action:back_folder').row()
 
-  const pageInfo = totalPages > 1 ? ` (Page ${page + 1}/${totalPages})` : ''
+  const pageInfo = totalPages > 1 ? ` (Page ${safePage + 1}/${totalPages})` : ''
   await gramCtx.editMessageText(
     `${message}${pageInfo}`,
     { reply_markup: keyboard },
@@ -590,7 +592,13 @@ async function executeSearchWithPagination(
     const time = msg.platform_timestamp
       ? new Date(msg.platform_timestamp * 1000).toLocaleString()
       : 'Unknown time'
-    return `${startIdx + index + 1}. [${chat}] ${from} (${time}):\n${content}`
+    const links = buildTelegramMessageLinks({
+      chatId: msg.in_chat_id,
+      messageId: msg.platform_message_id,
+      chatType: msg.in_chat_type,
+    })
+    const linkLine = links.length ? `🔗 ${links.join(' | ')}` : ''
+    return `${startIdx + index + 1}. [${chat}] ${from} (${time}):\n${content}${linkLine ? `\n${linkLine}` : ''}`
   })
 
   const pageInfo = page > 0 ? ` (Page ${page + 1})` : ''

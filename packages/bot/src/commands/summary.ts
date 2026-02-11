@@ -4,7 +4,17 @@ import type { BotCommandContext } from '.'
 
 import { InlineKeyboard } from 'grammy'
 
+import { buildPaginationButtons, paginateItems, splitTextToPages } from './helpers'
+
 type SummaryMode = 'unread' | 'today' | 'last24h'
+
+const SUMMARY_PAGE_SIZE = 3500
+
+interface SummaryState {
+  pages: string[]
+}
+
+const summaryStates = new Map<number, SummaryState>()
 
 export function registerSummaryCommand(bot: Bot, ctx: BotCommandContext) {
   const logger = ctx.logger.withContext('bot:command:summary')
@@ -50,6 +60,7 @@ export function registerSummaryCommand(bot: Bot, ctx: BotCommandContext) {
     }
 
     try {
+      summaryStates.delete(userId)
       await gramCtx.answerCallbackQuery()
       await gramCtx.editMessageText('📝 Fetching messages...')
 
@@ -109,16 +120,72 @@ export function registerSummaryCommand(bot: Bot, ctx: BotCommandContext) {
 
       // 4. Final update with complete summary
       const summaryText = `📊 **${modeLabel} Summary**\n\n${accumulatedText}\n\n---\n_Based on ${messages.length} message(s)_`
+      const pages = splitTextToPages(summaryText, SUMMARY_PAGE_SIZE)
 
+      if (pages.length <= 1) {
+        summaryStates.delete(userId)
+        await gramCtx.editMessageText(
+          summaryText,
+          { parse_mode: 'Markdown' },
+        )
+        return
+      }
+
+      summaryStates.set(userId, { pages })
+      const { pageItems, totalPages, page: safePage } = paginateItems(pages, 0, 1)
+      const keyboard = new InlineKeyboard()
+      const navButtons = buildPaginationButtons({
+        page: safePage,
+        hasMore: safePage < totalPages - 1,
+        prefix: 'summarypage:',
+        labels: { prev: '⬅️ Prev Page', next: '➡️ Next Page' },
+      })
+
+      if (navButtons.length > 0) {
+        keyboard.row(...navButtons)
+      }
+
+      const pageText = pageItems[0] || ''
       await gramCtx.editMessageText(
-        summaryText,
-        { parse_mode: 'Markdown' },
+        `${pageText}\n\n(Page ${safePage + 1}/${totalPages})`,
+        { parse_mode: 'Markdown', reply_markup: keyboard },
       )
     }
     catch (error) {
       logger.withError(error).error('Summary generation failed')
       await gramCtx.reply('❌ An error occurred while generating summary. Please try again later.')
     }
+  })
+
+  // Handle summary pagination
+  bot.callbackQuery(/^summarypage:/, async (gramCtx) => {
+    const userId = gramCtx.from.id
+    const page = Number.parseInt(gramCtx.callbackQuery.data.replace('summarypage:', ''), 10)
+
+    const state = summaryStates.get(userId)
+    if (!state) {
+      await gramCtx.answerCallbackQuery('Session expired. Please /summary again.')
+      return
+    }
+
+    const { pageItems, totalPages, page: safePage } = paginateItems(state.pages, page, 1)
+    const keyboard = new InlineKeyboard()
+    const navButtons = buildPaginationButtons({
+      page: safePage,
+      hasMore: safePage < totalPages - 1,
+      prefix: 'summarypage:',
+      labels: { prev: '⬅️ Prev Page', next: '➡️ Next Page' },
+    })
+
+    if (navButtons.length > 0) {
+      keyboard.row(...navButtons)
+    }
+
+    await gramCtx.answerCallbackQuery()
+    await gramCtx.editMessageText(
+      `${pageItems[0] || ''}\n\n(Page ${safePage + 1}/${totalPages})`,
+      { parse_mode: 'Markdown', reply_markup: keyboard },
+    )
   })
 }
 
