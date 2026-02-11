@@ -50,6 +50,32 @@ export async function getAccountChats(db: CoreDB, accountId: string): Promise<Ch
   }))
 }
 
+/**
+ * Remove control characters and lone surrogates from text
+ */
+export function sanitizeText(text: string): string {
+  return text
+    // eslint-disable-next-line sonarjs/no-control-regex, no-control-regex
+    .replace(/[\u0000-\u0008\v\f\u000E-\u001F\u007F]/g, '')
+    .replace(/[\uD800-\uDFFF]/g, '')
+    .trim()
+}
+
+/**
+ * Map chat type to display icon
+ */
+export function getChatTypeIcon(type: string): string {
+  switch (type) {
+    case 'group':
+    case 'supergroup':
+      return '👥'
+    case 'channel':
+      return '📢'
+    default:
+      return '💬'
+  }
+}
+
 export function paginateItems<T>(items: T[], page: number, perPage: number): PaginationResult<T> {
   const safePerPage = Math.max(1, Math.floor(perPage))
   const totalPages = Math.max(1, Math.ceil(items.length / safePerPage))
