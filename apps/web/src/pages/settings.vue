@@ -133,16 +133,27 @@ function updateConfig() {
                   class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
               </div>
-              <div>
-                <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.dimension') }}</label>
-                <select
-                  v-model="accountSettings.embedding.dimension"
-                  class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option v-for="dimension in embeddingDimensions" :key="dimension" :value="dimension">
-                    {{ dimension }}
-                  </option>
-                </select>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.dimension') }}</label>
+                  <select
+                    v-model="accountSettings.embedding.dimension"
+                    class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option v-for="dimension in embeddingDimensions" :key="dimension" :value="dimension">
+                      {{ dimension }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.batchSize') }}</label>
+                  <input
+                    v-model="accountSettings.embedding.batchSize"
+                    type="number"
+                    step="1"
+                    class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                </div>
               </div>
               <div>
                 <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.apiKey') }}</label>
