@@ -1,4 +1,7 @@
 {
+  "common": {
+    "unknownChat": "未知对话"
+  },
   "aiChat": {
     "aiChat": "AI 对话",
     "aiThinking": "AI 思考中...",
@@ -15,18 +18,19 @@
     "ragParameters": "RAG 参数",
     "relatedMessages": "相关消息",
     "retrievedInfo": "检索到的相关信息",
+    "retrievedPhotos": "检索到的相关图片",
     "searchQuery": "搜索查询",
     "searchingContext": "搜索相关上下文...",
     "selectScope": "搜索会话范围",
     "selectScopeDescription": "选择特定的对话进行搜索，留空则搜索所有对话。",
     "confirmFilter": "确认",
     "cancelFilter": "取消",
+    "viewInChat": "在聊天中查看",
     "send": "发送",
     "timeFilter": "时间过滤",
     "totalMessages": "总消息数",
     "typeYourMessage": "输入您的消息...",
     "userFilter": "用户过滤",
-    "viewInChat": "在聊天中查看",
     "regeneratedMessage": "消息已重新生成",
     "deletedMessage": "消息已删除"
   },
@@ -118,7 +122,11 @@
     "searching": "搜索中..."
   },
   "searchDialog": {
+    "messages": "消息",
+    "photos": "图片",
     "noRelatedMessages": "没有找到相关消息",
+    "noRelatedPhotos": "没有找到相关图片",
+    "noResults": "没有找到相关结果",
     "searchMessages": "搜索消息...",
     "searching": "搜索中...",
     "startTyping": "开始输入以搜索"
@@ -150,6 +158,8 @@
     "llm": "大语言模型",
     "llmModel": "LLM 模型",
     "llmProvider": "LLM 提供商",
+    "visionLLM": "视觉大模型（多模态）",
+    "visionLLMDescription": "多模态大语言模型，用于图片理解。用于生成图片描述以支持语义搜索。",
     "login": "登录",
     "logout": "退出登录",
     "logoutCurrentAccount": "退出当前账号",
@@ -176,7 +186,9 @@
     "telegramApi": "Telegram API",
     "temperature": "温度",
     "useCachedMessage": "使用数据库缓存的聊天记录",
-    "userResolver": "用户解析器"
+    "userResolver": "用户解析器",
+    "enablePhotoEmbedding": "启用图片 Embedding",
+    "enablePhotoEmbeddingDescription": "使用多模态大模型将图片转换为描述，再进行向量化以支持图片语义搜索"
   },
   "sync": {
     "cancel": "取消",

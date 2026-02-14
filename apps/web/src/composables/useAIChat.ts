@@ -55,6 +55,13 @@ interface RetrieveContextParams {
 interface GetDialogsParams {
 }
 
+interface SearchPhotosParams {
+  query: string
+  useVector: boolean
+  limit: number
+  chatIds?: string[] | null
+}
+
 interface ChatNoteParams {
   chatId: string
   note: string
@@ -94,7 +101,7 @@ export function useAIChatLogic() {
 
     return await tool({
       name: 'searchMessages',
-      description: `Search through Telegram message history using vector similarity or text search.
+      description: `Search through Telegram message history (text content/captions only) using vector similarity or text search.
 Use this when the user asks about past conversations, messages, or specific topics discussed.
 Parameters:
 - query: Search keywords (use Chinese for Chinese queries)
@@ -213,6 +220,73 @@ Parameters:
           success: true,
           dialogsCount: results.length,
           dialogs: results,
+        })
+      },
+    })
+  }
+
+  /**
+   * Create search photos tool
+   */
+  async function createSearchPhotosTool(
+    executor: (params: SearchPhotosParams) => Promise<any[]>,
+  ) {
+    logger.log('Creating searchPhotos tool')
+
+    const searchPhotosSchema = v.strictObject({
+      query: v.pipe(
+        v.string(),
+        v.description('Search query - keywords or phrases to describe the photo content'),
+      ),
+      useVector: v.pipe(
+        v.boolean(),
+        v.description('Whether to use vector similarity search (true) or text search (false)'),
+      ),
+      limit: v.pipe(
+        v.number(),
+        v.description('Maximum number of photos to retrieve (recommended: 5-10)'),
+      ),
+      chatIds: v.optional(v.pipe(
+        v.array(v.string()),
+        v.description('List of chat IDs to restrict search to. If provided, only photos from these chats will be returned.'),
+      )),
+    })
+
+    return await tool({
+      name: 'searchPhotos',
+      description: `Search through photos in Telegram messages using their AI-generated descriptions.
+Use this when the user asks about images, photos, or visual content from past conversations.
+Parameters:
+- query: Describe what to look for in photos (e.g., "sunset", "people eating", "text screenshot")
+- useVector: true for semantic search (recommended), false for exact text matching
+- limit: Number of results (5-10 recommended)`,
+      parameters: searchPhotosSchema,
+      execute: async (params: InferInput<typeof searchPhotosSchema>) => {
+        const startTime = Date.now()
+        logger.withFields({ params }).log('searchPhotos tool called')
+
+        const results = await executor({
+          ...params,
+          chatIds: params.chatIds || undefined,
+        })
+        const duration = Date.now() - startTime
+
+        logger.withFields({
+          duration,
+          resultsCount: results.length,
+        }).log('searchPhotos completed')
+
+        return JSON.stringify({
+          success: true,
+          resultsCount: results.length,
+          photos: results.map(photo => ({
+            id: photo.id,
+            chatId: photo.chatId,
+            chatName: photo.chatName,
+            description: photo.description?.substring(0, 200), // Truncate for token efficiency
+            createdAt: photo.createdAt,
+            similarity: photo.similarity,
+          })),
         })
       },
     })
@@ -370,24 +444,32 @@ Parameters:
 
 IMPORTANT INSTRUCTIONS:
 1. When the user asks about past messages, conversations, or specific topics, you MUST use the searchMessages tool
-2. Simple greetings and general knowledge questions do NOT require searching - respond directly
-3. When using searchMessages:
+2. When the user asks about photos, images, or visual content, you MUST use the searchPhotos tool
+3. Simple greetings and general knowledge questions do NOT require searching - respond directly
+4. When using searchMessages:
    - For Chinese queries, use Chinese keywords in the query
    - Set useVector=true for semantic search (recommended for most cases)
    - Set useVector=false for exact text matching
    - Set limit to 5-10 for most queries
-4. If a search result contains ambiguous references (like "this", "that", "it"), use retrieveContext to get surrounding messages
-5. Always cite specific messages when answering (mention date, sender, chat name if available)
-6. Be concise and direct in your responses
-7. If the user asks about their chats, conversations list, or what chats they have, use the getDialogs tool
-8. If the user asks to add or modify a note for a chat, use the chatNote tool
+5. When using searchPhotos:
+   - Describe the visual content you're looking for (e.g., "sunset", "people eating", "screenshot with text")
+   - Set useVector=true for semantic search (recommended)
+   - Set limit to 5-10 for most queries
+6. If the user's query is broad or could refer to either text OR visual content (e.g., "Find that thing about cats"), use BOTH searchMessages AND searchPhotos
+7. If a search result contains ambiguous references (like "this", "that", "it"), use retrieveContext to get surrounding messages
+8. Always cite specific messages when answering (mention date, sender, chat name if available)
+9. Be concise and direct in your responses
+10. If the user asks about their chats, conversations list, or what chats they have, use the getDialogs tool
+11. If the user asks to add or modify a note for a chat, use the chatNote tool
 
 EXAMPLES:
 - "Hello" -> Respond directly with a greeting, NO tool calling
 - "How are you?" -> Respond directly, NO tool calling
 - "What did we discuss?" -> Use searchMessages with query="discuss", useVector=true, limit=5
-- "What do I like to eat" -> Use searchMessages with query="like eat", useVector=true, limit=5
+- "What do I like to eat" -> Use BOTH searchMessages (query="like eat") AND searchPhotos (query="food eating meal")
 - "Who said 'hello'?" -> Use searchMessages with query="hello", useVector=false, limit=5
+- "Show me photos of sunset" -> Use searchPhotos with query="sunset", useVector=true, limit=5
+- "Find images with food" -> Use searchPhotos with query="food eating meal", useVector=true, limit=5
 - “Add a note for this chat” -> Use chatNote with chatId=currentChatId, note="This is a note for this chat", modify=true
 - "Get the note for this chat" -> Use chatNote with chatId=currentChatId, note="", modify=false
 
@@ -398,6 +480,7 @@ Remember: Only use tools when necessary. For greetings or general questions, res
     createSearchMessagesTool,
     createRetrieveContextTool,
     createGetDialogsTool,
+    createSearchPhotosTool,
     createChatNoteTool,
     callLLMWithTools,
     streamSimpleText,

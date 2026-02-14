@@ -28,6 +28,7 @@ function buildDefaultMessageProcessing() {
     receiveMessages: { receiveAll: true, downloadMedia: true },
     resolvers: { disabledResolvers: ['avatar'] },
     defaults: { syncMedia: true, maxMediaSize: 0 },
+    enablePhotoEmbedding: false,
   }
 }
 
@@ -43,6 +44,16 @@ watch(
     settings.messageProcessing.resolvers ??= { disabledResolvers: ['avatar'] }
     settings.messageProcessing.resolvers.disabledResolvers ??= ['avatar']
     settings.messageProcessing.defaults ??= { syncMedia: true, maxMediaSize: 0 }
+    settings.messageProcessing.enablePhotoEmbedding ??= false
+
+    // Initialize visionLLM with defaults if not present
+    settings.visionLLM ??= {
+      model: '',
+      apiKey: '',
+      apiBase: '',
+      temperature: 0.7,
+      maxTokens: 1024,
+    }
   },
   { immediate: true },
 )
@@ -232,6 +243,68 @@ function updateConfig() {
               </div>
             </div>
           </div>
+
+          <!-- Vision LLM Settings -->
+          <div>
+            <h3 class="mb-2 text-lg font-medium">
+              {{ t('settings.visionLLM') }}
+            </h3>
+            <p class="mb-4 text-sm text-muted-foreground">
+              {{ t('settings.visionLLMDescription') }}
+            </p>
+            <div class="grid gap-4">
+              <div>
+                <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.model') }}</label>
+                <input
+                  v-model="accountSettings.visionLLM.model"
+                  type="text"
+                  placeholder="qwen-vl-max"
+                  class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+              </div>
+              <div>
+                <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.apiKey') }}</label>
+                <input
+                  v-model="accountSettings.visionLLM.apiKey"
+                  type="password"
+                  class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+              </div>
+              <div>
+                <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.apiBaseUrl') }}</label>
+                <input
+                  v-model="accountSettings.visionLLM.apiBase"
+                  type="text"
+                  placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+                  class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.temperature') }}</label>
+                  <input
+                    v-model.number="accountSettings.visionLLM.temperature"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm text-muted-foreground font-medium">{{ t('settings.maxTokens') }}</label>
+                  <input
+                    v-model.number="accountSettings.visionLLM.maxTokens"
+                    type="number"
+                    step="100"
+                    min="100"
+                    max="4000"
+                    class="mt-1 block w-full border rounded-md bg-background px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -335,6 +408,25 @@ function updateConfig() {
                   <div class="peer h-6 w-11 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:rounded-full after:bg-background peer-checked:bg-primary peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring after:transition-all after:content-[''] peer-checked:after:translate-x-full" />
                 </label>
               </div>
+            </div>
+          </div>
+
+          <div class="border-t pt-4 space-y-3">
+            <div class="flex items-start gap-3">
+              <input
+                id="photo-embedding-enabled"
+                v-model="messageProcessing.enablePhotoEmbedding"
+                type="checkbox"
+                class="mt-1 h-4 w-4 cursor-pointer border-gray-300 rounded text-primary focus:ring-2 focus:ring-primary"
+              >
+              <label for="photo-embedding-enabled" class="flex-1 cursor-pointer">
+                <div class="text-sm text-foreground font-medium">
+                  {{ t('settings.enablePhotoEmbedding') }}
+                </div>
+                <div class="text-xs text-muted-foreground">
+                  {{ t('settings.enablePhotoEmbeddingDescription') }}
+                </div>
+              </label>
             </div>
           </div>
         </div>
