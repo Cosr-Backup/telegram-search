@@ -23,6 +23,17 @@ export function createConnectionService(ctx: CoreContext, logger: Logger, option
 }) {
   logger = logger.withContext('services:connection')
 
+  function toProxyLogSummary(proxy: ProxyInterface) {
+    return {
+      ip: proxy.ip,
+      port: proxy.port,
+      socksType: 'socksType' in proxy ? proxy.socksType : undefined,
+      isMTProxy: !!('MTProxy' in proxy && proxy.MTProxy),
+      hasAuth: !!(('username' in proxy && proxy.username) || ('password' in proxy && proxy.password) || ('secret' in proxy && proxy.secret)),
+      timeout: proxy.timeout,
+    }
+  }
+
   const getProxyInterface = (proxyConfig: ProxyConfig | undefined): ProxyInterface | undefined => {
     if (!proxyConfig || !proxyConfig.proxyUrl) {
       return undefined
@@ -64,7 +75,7 @@ export function createConnectionService(ctx: CoreContext, logger: Logger, option
 
     const proxy = getProxyInterface(options.proxy)
     if (proxy) {
-      logger.withFields({ proxy }).verbose('Using proxy')
+      logger.withFields({ proxy: toProxyLogSummary(proxy) }).verbose('Using proxy')
     }
 
     let useWSS = true
@@ -126,7 +137,7 @@ export function createConnectionService(ctx: CoreContext, logger: Logger, option
       }
 
       // NOTE: The client will return string session, so forward it to frontend
-      const sessionString = await client.session.save() as unknown as string
+      const sessionString = String(await client.session.save())
       logger.withFields({ hasSession: !!sessionString }).verbose('Forwarding session to client')
 
       // 1) Forward updated session to frontend so it can persist it.
@@ -161,7 +172,7 @@ export function createConnectionService(ctx: CoreContext, logger: Logger, option
       }
 
       // NOTE: The client will return string session, so forward it to frontend
-      const sessionString = await client.session.save() as unknown as string
+      const sessionString = String(await client.session.save())
       logger.withFields({ hasSession: !!sessionString }).verbose('Forwarding session to client')
 
       // 1) Forward updated session
