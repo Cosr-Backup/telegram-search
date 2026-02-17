@@ -20,11 +20,8 @@ export function v1api(db: CoreDB, models: Models, mediaBinaryProvider: MediaBina
     try {
       const photo = (await models.photoModels.findPhotoByQueryId(db, queryId)).expect('Failed to find photo')
 
-      useLogger('v1api:photos').withFields({ photo }).debug('Found photo')
-
       let bytes: Uint8Array | undefined
-
-      useLogger('v1api:photos').withFields({ mediaBinaryProvider }).debug('Found media binary provider')
+      let source: 'storage' | 'database' | 'missing' = 'missing'
 
       if (mediaBinaryProvider && photo.image_path) {
         const location: MediaBinaryLocation = {
@@ -32,10 +29,14 @@ export function v1api(db: CoreDB, models: Models, mediaBinaryProvider: MediaBina
           path: photo.image_path,
         }
         bytes = await mediaBinaryProvider.load(location) ?? undefined
+        if (bytes) {
+          source = 'storage'
+        }
       }
 
       if (!bytes && photo.image_bytes) {
         bytes = new Uint8Array(photo.image_bytes as unknown as ArrayBufferLike)
+        source = 'database'
       }
 
       if (!bytes || bytes.length === 0) {
@@ -45,6 +46,13 @@ export function v1api(db: CoreDB, models: Models, mediaBinaryProvider: MediaBina
       const fileType = photo.image_mime_type
         || (await fileTypeFromBuffer(bytes))?.mime
         || 'application/octet-stream'
+
+      useLogger('v1api:photos').withFields({
+        queryId,
+        source,
+        mimeType: fileType,
+        size: bytes.length,
+      }).debug('Serving photo')
 
       return new Response(Buffer.from(bytes), {
         headers: {
@@ -69,11 +77,8 @@ export function v1api(db: CoreDB, models: Models, mediaBinaryProvider: MediaBina
     try {
       const sticker = (await models.stickerModels.findStickerByQueryId(db, queryId)).expect('Failed to find sticker')
 
-      useLogger('v1api:stickers').withFields({ sticker }).debug('Found sticker')
-
       let bytes: Uint8Array | undefined
-
-      useLogger('v1api:stickers').withFields({ mediaBinaryProvider }).debug('Found media binary provider')
+      let source: 'storage' | 'database' | 'missing' = 'missing'
 
       if (mediaBinaryProvider && sticker.sticker_path) {
         const location: MediaBinaryLocation = {
@@ -81,10 +86,14 @@ export function v1api(db: CoreDB, models: Models, mediaBinaryProvider: MediaBina
           path: sticker.sticker_path,
         }
         bytes = await mediaBinaryProvider.load(location) ?? undefined
+        if (bytes) {
+          source = 'storage'
+        }
       }
 
       if (!bytes && sticker.sticker_bytes) {
         bytes = new Uint8Array(sticker.sticker_bytes as unknown as ArrayBufferLike)
+        source = 'database'
       }
 
       if (!bytes || bytes.length === 0) {
@@ -94,6 +103,13 @@ export function v1api(db: CoreDB, models: Models, mediaBinaryProvider: MediaBina
       const fileType = sticker.sticker_mime_type
         || (await fileTypeFromBuffer(bytes))?.mime
         || 'application/octet-stream'
+
+      useLogger('v1api:stickers').withFields({
+        queryId,
+        source,
+        mimeType: fileType,
+        size: bytes.length,
+      }).debug('Serving sticker')
 
       return new Response(Buffer.from(bytes), {
         headers: {
