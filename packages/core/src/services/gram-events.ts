@@ -10,11 +10,18 @@ import { CoreEventType } from '../types/events'
 
 export type GramEventsService = ReturnType<typeof createGramEventsService>
 
+function hasPts(update: unknown): update is { pts: number } {
+  return typeof update === 'object'
+    && update !== null
+    && 'pts' in update
+    && typeof (update as { pts?: unknown }).pts === 'number'
+}
+
 export function createGramEventsService(ctx: CoreContext, logger: Logger) {
   logger = logger.withContext('core:gram-events')
 
   // Store event handler reference and event type for cleanup
-  let eventHandler: ((event: any) => void) | undefined
+  let eventHandler: ((event: EventBuilder) => Promise<void>) | undefined
   let eventType: NewMessage | undefined
 
   function registerGramEvents() {
@@ -38,8 +45,8 @@ export function createGramEventsService(ctx: CoreContext, logger: Logger) {
         else if (originalUpdate instanceof Api.UpdateNewMessage) {
           pts = originalUpdate.pts
         }
-        else if (originalUpdate && typeof originalUpdate === 'object' && 'pts' in originalUpdate) {
-          pts = (originalUpdate as any).pts
+        else if (hasPts(originalUpdate)) {
+          pts = originalUpdate.pts
           // Fallback check: if message's peer is a channel, it's a channel PTS
           isChannel = event.message.peerId instanceof Api.PeerChannel
         }
