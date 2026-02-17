@@ -11,38 +11,17 @@ import { getDB } from './storage/drizzle'
 import { getMediaStorage } from './storage/media'
 
 /**
- * Account state - one per Telegram account
+ * Account-scoped runtime state.
  *
- * Architecture Decision:
- * - ONE AccountState per Telegram account (by accountId/sessionId)
- * - PERSISTS across WebSocket reconnections
- * - SHARED by multiple browser tabs/windows
- *
- * Lifecycle:
- * - Created: On first WebSocket connection with a new accountId
- * - Reused: Subsequent connections with the same accountId
- * - Destroyed: Only when user explicitly logs out (auth:logout event)
- *
- * Memory Management:
- * - Event listeners registered ONCE per account, not per WebSocket connection
- * - This prevents memory leaks from listener accumulation
- * - All listeners cleaned up on explicit logout via destroyCoreInstance()
- *
- * Benefits:
- * 1. Multiple tabs share same Telegram connection (no re-authentication)
- * 2. Background tasks continue running even when all tabs closed
- * 3. Fast reconnection (state preserved)
- * 4. No memory leaks (listeners reused, not duplicated)
- *
- * Trade-offs:
- * - Accounts persist indefinitely until explicit logout
- * - Server memory usage grows with number of unique accounts
- * - Acceptable for typical use cases (limited number of accounts per server)
- *
- * Future Enhancement:
- * - Optional TTL-based cleanup for inactive accounts
- * - Admin API to list/manage active accounts
+ * Decision:
+ * - Keep one CoreContext per account ID and share it across peers.
+ * Constraints:
+ * - Account state is destroyed only on explicit logout.
+ * Risks:
+ * - Long-lived accounts increase memory usage; monitor active account count.
  */
+export type CoreEventListener = (...args: unknown[]) => void
+
 export interface AccountState {
   ctx: CoreContext
 
@@ -54,7 +33,7 @@ export interface AccountState {
   /**
    * Core event listeners (registered once, shared by all WebSocket connections)
    */
-  coreEventListeners: Map<keyof FromCoreEvent, (data: any) => void>
+  coreEventListeners: Map<keyof FromCoreEvent, CoreEventListener>
 
   /**
    * Active WebSocket peers for this account
@@ -66,47 +45,11 @@ export interface AccountState {
   lastActive: number
 }
 
-/**
- * Primary state: Account-based (persistent)
- *
- * Key: accountId (from WebSocket URL ?sessionId=xxx)
- * Value: AccountState with CoreContext, Telegram Client, event listeners
- *
- * Lifecycle: Created once, reused forever, destroyed only on explicit logout
- *
- * Why persistent?
- * 1. Support multiple browser tabs sharing same Telegram connection
- * 2. Allow background tasks to continue when all tabs closed
- * 3. Enable fast reconnection without re-authentication
- * 4. Prevent memory leaks by reusing event listeners
- */
+// Persistent account map keyed by session/account id.
 export const accountStates = new Map<string, AccountState>()
 
-/**
- * Transient state: Per-WebSocket-connection (ephemeral)
- *
- * These maps track temporary data that only exists while WebSocket is open
- * Cleaned up immediately when WebSocket closes
- */
+// Ephemeral per-peer bookkeeping.
 export const peerToAccountId = new Map<string, string>()
-
-/**
- * Get or create account state
- *
- * Key principle: Account state is created once and reused
- *
- * Flow:
- * 1. First WebSocket connection with accountId "abc" -> Create new AccountState
- * 2. Open second tab with same accountId "abc" -> Reuse existing AccountState
- * 3. Close first tab -> AccountState remains (second tab still connected)
- * 4. Close second tab -> AccountState still remains (supports background tasks)
- * 5. User clicks "Logout" -> AccountState destroyed via destroyCoreInstance()
- *
- * Memory Safety:
- * - Event listeners registered only once per account (not per connection)
- * - Listeners properly cleaned up on logout via ctx.cleanup()
- * - No listener accumulation = no memory leak
- */
 
 // We need to track peer objects for broadcasting
 export const peerObjects = new Map<string, Peer>()

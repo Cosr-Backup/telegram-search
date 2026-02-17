@@ -10,6 +10,14 @@ import { EmbeddingDimension } from '../types/account-settings'
 import { embedContents } from '../utils/embed'
 import { describeImage } from '../utils/vision'
 
+type SupportedVectorDimension = 768 | 1024 | 1536
+
+const EMBEDDING_DIMENSION_TO_VECTOR_DIMENSION: Record<EmbeddingDimension, SupportedVectorDimension> = {
+  [EmbeddingDimension.DIMENSION_1536]: 1536,
+  [EmbeddingDimension.DIMENSION_1024]: 1024,
+  [EmbeddingDimension.DIMENSION_768]: 768,
+}
+
 export function createPhotoEmbeddingResolver(ctx: CoreContext, logger: Logger): MessageResolver {
   logger = logger.withContext('core:resolver:photo-embedding')
 
@@ -25,19 +33,19 @@ export function createPhotoEmbeddingResolver(ctx: CoreContext, logger: Logger): 
         messagesCount: opts.messages.length,
       }).log('Photo embedding resolver started')
 
-      // 检查是否启用了图片 embedding 功能
+      // Skip expensive vision/embedding calls unless photo embedding is explicitly enabled.
       if (!messageProcessing?.enablePhotoEmbedding) {
         logger.warn('Photo embedding is disabled in settings. Please enable it in Settings → Message Processing → Enable Photo Embedding')
         return Ok([])
       }
 
-      // 检查 Vision LLM API key 是否配置
+      // Guard against misconfiguration before hitting remote APIs.
       if (!visionLLM.apiKey || visionLLM.apiKey.trim() === '') {
         logger.warn('Vision LLM API key is not configured. Please configure it in Settings → API → Vision LLM')
         return Ok([])
       }
 
-      // 检查 Embedding API key 是否配置
+      // Guard against misconfiguration before hitting remote APIs.
       if (!embedding.apiKey || embedding.apiKey.trim() === '') {
         logger.warn('Embedding API key is not configured. Please configure it in Settings → API')
         return Ok([])
@@ -52,7 +60,7 @@ export function createPhotoEmbeddingResolver(ctx: CoreContext, logger: Logger): 
         return Ok([])
       }
 
-      // 从数据库查询照片（media resolver 已经完成，照片应该已保存）
+      // Media resolver runs first, so target photos should already be persisted.
       const photosToProcess = await photoModels.findPhotosByMessageUUIDs(db, messageUUIDs)
         .then(result => result.orDefault([]))
 
@@ -65,13 +73,12 @@ export function createPhotoEmbeddingResolver(ctx: CoreContext, logger: Logger): 
         return Ok([])
       }
 
-      // 过滤出需要处理的照片（没有 embedding 的）
+      // Re-process only when forced or when no vector exists yet.
       const photosNeedProcessing = photosToProcess.filter((photo) => {
         const hasEmbedding = photo.description_vector_1536?.length
           || photo.description_vector_1024?.length
           || photo.description_vector_768?.length
 
-        // 如果强制重新获取，或者没有 embedding，则需要处理
         return opts.forceRefetch || !hasEmbedding
       })
 
@@ -81,7 +88,7 @@ export function createPhotoEmbeddingResolver(ctx: CoreContext, logger: Logger): 
         return Ok([])
       }
 
-      // 批量生成描述
+      // Build descriptions first so embedding can be batched in one request.
       const descriptionsToEmbed: Array<{ photoId: string, description: string }> = []
 
       for (const photo of photosNeedProcessing) {
@@ -90,19 +97,17 @@ export function createPhotoEmbeddingResolver(ctx: CoreContext, logger: Logger): 
 
           let description: string
 
-          // 如果已有描述且不强制重新获取，使用现有描述
+          // Reuse existing description unless forceRefetch is requested.
           if (hasDescription && !opts.forceRefetch) {
             description = photo.description
             logger.withFields({ photoId: photo.id }).log('Using existing description')
           }
           else {
-            // 从数据库读取图片数据
             if (!photo.image_bytes) {
               logger.withFields({ photoId: photo.id }).warn('Photo has no image bytes in database, skipping')
               continue
             }
 
-            // 生成新描述
             logger.withFields({
               photoId: photo.id,
               imageBytesLength: photo.image_bytes.length,
@@ -128,31 +133,15 @@ export function createPhotoEmbeddingResolver(ctx: CoreContext, logger: Logger): 
         return Ok([])
       }
 
-      // 批量生成 embedding
+      // Batch embedding reduces latency and request overhead.
       logger.withFields({ count: descriptionsToEmbed.length }).log('Generating embeddings for photos')
 
       const descriptions = descriptionsToEmbed.map(d => d.description)
       const embedResult = await embedContents(descriptions, embedding)
-      const { embeddings, dimension } = embedResult.expect('Failed to generate embeddings')
+      const { embeddings } = embedResult.expect('Failed to generate embeddings')
+      const validDimension = EMBEDDING_DIMENSION_TO_VECTOR_DIMENSION[embedding.dimension]
 
-      // 验证维度
-      let validDimension: 768 | 1024 | 1536
-      switch (dimension) {
-        case EmbeddingDimension.DIMENSION_1536:
-          validDimension = 1536
-          break
-        case EmbeddingDimension.DIMENSION_1024:
-          validDimension = 1024
-          break
-        case EmbeddingDimension.DIMENSION_768:
-          validDimension = 768
-          break
-        default:
-          logger.withFields({ dimension }).warn('Unsupported embedding dimension')
-          return Ok([])
-      }
-
-      // 批量更新数据库
+      // Persist generated descriptions and vectors.
       for (let i = 0; i < descriptionsToEmbed.length; i++) {
         const { photoId, description } = descriptionsToEmbed[i]
         const vector = embeddings[i]

@@ -2,7 +2,7 @@ import type { Logger } from '@guiiai/logg'
 import type { Api } from 'telegram'
 
 import type { CoreContext } from '../context'
-import type { MessageResolverRegistryFn } from '../message-resolvers'
+import type { MessageResolver, MessageResolverRegistryFn } from '../message-resolvers'
 import type { SyncOptions } from '../types/events'
 
 import { chatMessageModels } from '../models/chat-message'
@@ -78,7 +78,7 @@ export function createMessageResolverService(
     // Embedding or resolve messages
     const resolverSpans: Array<{ name: string, duration: number, count: number }> = []
 
-    const executeResolver = async (name: string, resolver: any) => {
+    const executeResolver = async (name: string, resolver: MessageResolver) => {
       const resolverStart = performance.now()
       logger.withFields({ name }).verbose('Process messages with resolver')
 
@@ -124,7 +124,7 @@ export function createMessageResolverService(
       }
     }
 
-    // 分离出需要顺序执行的 resolvers
+    // Resolve enabled resolvers and preserve registration order.
     const allResolvers = Array.from(resolvers.registry.entries())
       .filter(([name]) => {
         if (disabledResolvers.includes(name))
@@ -141,13 +141,13 @@ export function createMessageResolverService(
         return true
       })
 
-    // 先执行 media resolver（如果存在）
+    // Run media first to satisfy downstream resolvers that depend on persisted media records.
     const mediaResolver = allResolvers.find(([name]) => name === 'media')
     if (mediaResolver) {
       await executeResolver(mediaResolver[0], mediaResolver[1])
     }
 
-    // 然后并行执行其他 resolvers
+    // Run remaining resolvers concurrently after media is complete.
     const otherResolvers = allResolvers.filter(([name]) => name !== 'media')
     const promises = otherResolvers.map(([name, resolver]) => executeResolver(name, resolver))
 

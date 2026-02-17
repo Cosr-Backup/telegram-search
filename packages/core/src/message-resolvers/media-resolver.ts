@@ -209,9 +209,8 @@ export function createMediaResolver(
               logger.withError(err as Error).debug('downloadMedia failed, trying direct download via InputFileLocation')
             }
 
-            // When downloadMedia fails (e.g. protected/noForwards channels), construct
-            // InputFileLocation manually and use the low-level downloadFile API to bypass
-            // the forwarding restriction. upload.getFile is not subject to noForwards.
+            // NOTICE: Some channels block high-level downloadMedia paths (e.g. noForwards).
+            // Build InputFileLocation manually and fallback to downloadFile/upload.getFile.
             if (!byte) {
               try {
                 byte = await downloadMediaDirect(client, apiMedia, logger)

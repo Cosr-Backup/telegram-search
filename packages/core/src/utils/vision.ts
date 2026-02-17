@@ -16,26 +16,26 @@ export async function describeImage(
   visionConfig: VisionLLMConfig | LLMConfig,
 ): Promise<Result<DescribeImageResult>> {
   try {
-    // 检查必需的配置
+    // Fail fast to avoid sending malformed requests to the vision provider.
     if (!visionConfig.apiBase || !visionConfig.model) {
       return Err('Vision LLM apiBase and model are required for photo embedding')
     }
 
-    // 将图片转换为 base64
+    // Encode image bytes into a data URL payload accepted by multimodal APIs.
     let base64Image: string
     if (imageData instanceof Uint8Array) {
-      // 浏览器环境：Uint8Array -> base64
+      // NOTICE: Browser runtime does not provide Buffer by default.
       const binaryString = Array.from(imageData)
         .map(byte => String.fromCharCode(byte))
         .join('')
       base64Image = btoa(binaryString)
     }
     else {
-      // Node.js 环境：Buffer -> base64
+      // Node runtime supports direct base64 encoding from Buffer.
       base64Image = (imageData as unknown as Buffer).toString('base64')
     }
 
-    // 根据文件头判断 MIME 类型
+    // Infer MIME type from signature bytes to improve model compatibility.
     let mimeType = 'image/jpeg'
     if (imageData[0] === 0x89 && imageData[1] === 0x50) {
       mimeType = 'image/png'
@@ -47,10 +47,10 @@ export async function describeImage(
       mimeType = 'image/webp'
     }
 
-    // 构造 data URL
+    // Wrap base64 payload into a data URL for the image_url content type.
     const dataUrl = `data:${mimeType};base64,${base64Image}`
 
-    // 使用 xsai 调用多模态模型
+    // Call the vision-capable model and request concise scene description.
     const result = await generateText({
       baseURL: visionConfig.apiBase,
       model: visionConfig.model,

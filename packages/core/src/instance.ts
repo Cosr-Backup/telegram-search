@@ -37,16 +37,8 @@ export function createCoreInstance(
  * It ensures complete cleanup of all resources to prevent memory leaks.
  *
  * Cleanup Sequence:
- * 1. Emit CoreEventType.CoreCleanup event
- *    - Notifies all services to clean up (e.g., gram-events removes Telegram event handlers)
- *    - Services listen via: emitter.once(CoreEventType.CoreCleanup, cleanup)
- *    - Event is emitted synchronously, all listeners execute immediately
- *
- * 2. Wait 100ms for async cleanup
- *    - Some services may have async cleanup operations
- *    - This timeout ensures they complete before we proceed
- *    - Note: EventEmitter.emit() is synchronous, but cleanup logic inside listeners may be async
- *
+ * 1. Emit CoreEventType.CoreCleanup event for backward compatibility
+ * 2. Await registered handler cleanup hooks
  * 3. Disconnect Telegram Client
  *    - Properly close the Telegram connection
  *    - Prevents hanging connections and resource leaks
@@ -62,11 +54,6 @@ export function createCoreInstance(
  * - JavaScript GC can reclaim all memory
  * - No memory leaks
  *
- * Related PR Comments:
- * - Copilot: "Cleanup sequence has potential issue with ordering"
- *   -> Response: emit() is synchronous, listeners execute immediately, so order is correct
- * - Copilot: "100ms timeout is arbitrary"
- *   -> Response: True, but sufficient for current services; can be improved with Promise-based cleanup
  */
 export async function destroyCoreInstance(ctx: CoreContext) {
   // Emit cleanup event to notify all services

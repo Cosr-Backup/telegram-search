@@ -35,7 +35,7 @@ watch(() => props.photos, async (newPhotos) => {
       type: 'photo',
       queryId: photo.id,
       mimeType: photo.mimeType,
-      // Mock required fields for TS, not used by hydration logic
+      // Hydration path only uses queryId/type, keep a stable placeholder platformId.
       platformId: 'mock',
     } as CoreMessageMediaFromBlob
 
@@ -57,7 +57,7 @@ watch(() => props.photos, async (newPhotos) => {
   }
 }, { immediate: true, deep: true })
 
-// 跳转到图片所在的消息
+// Navigate to the source message that contains this photo.
 function navigateToPhoto(photo: CoreRetrievalPhoto) {
   if (!photo.chatId || !photo.platformMessageId) {
     return
@@ -72,9 +72,9 @@ function navigateToPhoto(photo: CoreRetrievalPhoto) {
   })
 }
 
-// 获取图片的显示时间戳（与 MessageList 一致）
+// Keep timestamp formatting consistent with MessageList.
 function getPhotoTimestamp(photo: CoreRetrievalPhoto) {
-  // createdAt 是毫秒时间戳，需要转换为秒
+  // createdAt is stored in milliseconds while formatter expects seconds.
   return formatMessageTimestamp(Math.floor(photo.createdAt / 1000))
 }
 </script>
@@ -90,7 +90,7 @@ function getPhotoTimestamp(photo: CoreRetrievalPhoto) {
         @keydown.enter="navigateToPhoto(photo)"
         @click="navigateToPhoto(photo)"
       >
-        <!-- 左侧：聊天头像 -->
+        <!-- Left: preview/avatar -->
         <div class="shrink-0 pt-0.5">
           <img
             v-if="photo.blobUrl"
@@ -106,15 +106,15 @@ function getPhotoTimestamp(photo: CoreRetrievalPhoto) {
             :name="photo.chatName || ''"
             size="md"
           />
-          <!-- 备选：图片图标 -->
+          <!-- Fallback icon when preview and avatar are unavailable -->
           <div v-else class="h-10 w-10 flex items-center justify-center rounded-full bg-primary/10">
             <span class="i-lucide-image h-5 w-5 text-primary" />
           </div>
         </div>
 
-        <!-- 右侧：图片信息（与 MessageList 布局完全一致） -->
+        <!-- Right: metadata -->
         <div class="min-w-0 flex-1">
-          <!-- 标题行：聊天名称 + 时间（与 MessageList 一致） -->
+          <!-- Title row -->
           <div class="flex items-baseline gap-2">
             <span class="truncate text-sm text-gray-900 font-semibold dark:text-gray-100">
               {{ photo.chatName || t('common.unknownChat') }}
@@ -124,12 +124,12 @@ function getPhotoTimestamp(photo: CoreRetrievalPhoto) {
             </span>
           </div>
 
-          <!-- 描述（与 MessageList 的内容行一致） -->
+          <!-- Description -->
           <div v-if="photo.description" class="mt-1 whitespace-pre-wrap break-words text-sm text-gray-600 dark:text-gray-400">
             {{ photo.description }}
           </div>
 
-          <!-- 底部信息：消息ID（与 MessageList 一致） -->
+          <!-- Footer metadata -->
           <div v-if="photo.platformMessageId" class="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
             <span class="i-lucide-hash h-3 w-3" />
             <span>{{ photo.platformMessageId }}</span>

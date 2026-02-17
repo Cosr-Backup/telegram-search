@@ -294,7 +294,7 @@ async function updatePhotoEmbedding(
       updated_at: Date.now(),
     }
 
-    // 根据向量维度设置对应的字段
+    // Persist vector into the column that matches the embedding dimension.
     switch (data.dimension) {
       case 1536:
         updateData.description_vector_1536 = data.vector
