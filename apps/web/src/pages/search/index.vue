@@ -1,46 +1,18 @@
 <script setup lang="ts">
-import type { CoreRetrievalMessages } from '@tg-search/core/types'
-
-import { useBridge } from '@tg-search/client'
-import { CoreEventType } from '@tg-search/core'
-import { useDebounce } from '@vueuse/core'
-import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import MessageList from '../../components/messages/MessageList.vue'
 
+import { useMessageSearch } from '../../composables/useMessageSearch'
+
 const { t } = useI18n()
 
-const isLoading = ref(false)
-
-const keyword = ref<string>('')
-const keywordDebounced = useDebounce(keyword, 1000)
-
-const bridge = useBridge()
-const searchResult = ref<CoreRetrievalMessages[]>([])
-
-// TODO: Infinite scroll
-watch(keywordDebounced, (newKeyword) => {
-  if (newKeyword.length === 0) {
-    searchResult.value = []
-    return
-  }
-
-  isLoading.value = true
-  bridge.sendEvent(CoreEventType.StorageSearchMessages, {
-    content: newKeyword,
-    useVector: true,
-    pagination: {
-      limit: 10,
-      offset: 0,
-    },
-  })
-
-  bridge.waitForEvent(CoreEventType.StorageSearchMessagesData).then(({ messages }) => {
-    searchResult.value = messages
-    isLoading.value = false
-  })
-})
+const {
+  isLoading,
+  keyword,
+  keywordDebounced,
+  searchResult,
+} = useMessageSearch()
 </script>
 
 <template>
