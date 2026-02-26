@@ -2,7 +2,7 @@ name: telegram-search-dev
 
 services:
   pgvector:
-    image: ghcr.io/tensorchord/pgvecto-rs:pg17-v0.4.0
+    image: ghcr.io/tensorchord/vchord-postgres:pg17-v1.0.0
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DATABASE: postgres
