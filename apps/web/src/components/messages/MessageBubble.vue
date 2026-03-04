@@ -10,7 +10,7 @@ import EntityAvatar from '../avatar/EntityAvatar.vue'
 import ContextMenu from '../ui/ContextMenu.vue'
 import MediaRenderer from './media/MediaRenderer.vue'
 
-import { getChatLink, getMessageLink } from '../../utils/telegram-links'
+import { getChatLink, getMessageLink, getMessageWebLink, getUserLink } from '../../utils/telegram-links'
 
 const props = defineProps<{
   message: CoreMessage
@@ -31,11 +31,17 @@ const senderTelegramLink = computed(() => {
   if (!currentChat.value)
     return null
   // For channel messages, fromId is the channel itself
-  if (currentChat.value.type === 'channel' || currentChat.value.type === 'supergroup')
+  if (currentChat.value.type === 'channel')
     return getChatLink(currentChat.value)
 
-  // For users, we don't have the username in the message, but t.me/@id works
-  return `https://t.me/@id${props.message.fromId}`
+  // For all other chat types (supergroup, group, user), link to the sender's profile
+  return getUserLink(props.message.fromId)
+})
+
+const chatTelegramLink = computed(() => {
+  if (!currentChat.value)
+    return null
+  return getChatLink(currentChat.value)
 })
 
 // Context menu state
@@ -57,13 +63,12 @@ const contextMenuItems = computed(() => {
       label: t('messages.copyMessageLink'),
       icon: 'i-lucide-link',
       action: () => {
-        const link = messageTelegramLink.value
-        if (link) {
-          navigator.clipboard.writeText(link)
-        }
-        else {
-          navigator.clipboard.writeText(`https://t.me/c/${props.message.chatId}/${props.message.platformMessageId}`)
-        }
+        // Use web link (https://t.me) for clipboard — more shareable than tg://
+        const webLink = currentChat.value
+          ? getMessageWebLink(currentChat.value, props.message.platformMessageId)
+          : null
+        const link = webLink ?? `https://t.me/c/${props.message.chatId}/${props.message.platformMessageId}`
+        navigator.clipboard.writeText(link)
         toast.success(t('messages.copied'))
       },
     },
@@ -74,7 +79,7 @@ const contextMenuItems = computed(() => {
       label: t('messages.openInTelegram'),
       icon: 'i-lucide-external-link',
       action: () => {
-        window.open(messageTelegramLink.value!, '_blank')
+        window.open(messageTelegramLink.value!, '_self')
       },
     })
   }
@@ -84,7 +89,17 @@ const contextMenuItems = computed(() => {
       label: t('messages.openProfileInTelegram'),
       icon: 'i-lucide-user',
       action: () => {
-        window.open(senderTelegramLink.value!, '_blank')
+        window.open(senderTelegramLink.value!, '_self')
+      },
+    })
+  }
+
+  if (chatTelegramLink.value) {
+    items.push({
+      label: t('messages.openChatInTelegram'),
+      icon: 'i-lucide-message-circle',
+      action: () => {
+        window.open(chatTelegramLink.value!, '_self')
       },
     })
   }
@@ -130,7 +145,14 @@ function cancelLongPress() {
     @pointermove="cancelLongPress"
     @pointercancel="cancelLongPress"
   >
-    <div class="shrink-0 pt-0.5">
+    <a
+      class="shrink-0 pt-0.5"
+      :class="senderTelegramLink ? 'cursor-pointer' : ''"
+      :href="senderTelegramLink ?? undefined"
+      target="_blank"
+      rel="noopener noreferrer"
+      @click.stop
+    >
       <EntityAvatar
         :id="message.fromId"
         entity="other"
@@ -138,7 +160,7 @@ function cancelLongPress() {
         :name="message.fromName"
         size="md"
       />
-    </div>
+    </a>
     <div class="min-w-0 flex-1">
       <div class="mb-1.5 flex items-baseline gap-2">
         <span class="truncate text-sm text-foreground font-semibold">{{ message.fromName }}</span>

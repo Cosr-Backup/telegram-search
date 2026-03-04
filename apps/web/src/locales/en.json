@@ -116,7 +116,8 @@
     "copyMessageLink": "Copy message link",
     "openInChat": "Open in chat",
     "openInTelegram": "Open in Telegram",
-    "openProfileInTelegram": "View sender profile"
+    "openProfileInTelegram": "View sender profile",
+    "openChatInTelegram": "Open chat in Telegram"
   },
   "search": {
     "noRelatedMessages": "No related messages found",

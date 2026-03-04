@@ -49,7 +49,7 @@ const avatarContextItems = computed(() => {
       label: t('messages.openInTelegram'),
       icon: 'i-lucide-external-link',
       action: () => {
-        window.open(chatTelegramLink.value!, '_blank')
+        window.open(chatTelegramLink.value!, '_self')
       },
     })
   }
