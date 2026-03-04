@@ -56,10 +56,18 @@
 ### 🔍 Chat Record Search
 - [x] Intelligent word segmentation for accurate, multilingual retrieval
 - [x] Combines fuzzy matching with vector-based semantic search for highly efficient results
+- [x] Image semantic search: find images by text description via image embedding
+- [x] Infinite scroll for search results — smoother browsing experience
 - [x] RAG-powered AI Q&A: Chat with AI using your Telegram history as real-time context
+
+### 🤖 Telegram Bot
+- [x] Search and export messages via Bot
+- [x] Message deep links — jump to the original conversation in one click
 
 ### 🚀 Advanced Features
 - [x] Smart unread message summaries: Instantly aggregate all unread content with a concise AI-generated summary
+- [x] Date range filtering for quickly narrowing down search results
+- [x] Context menu to jump to the original Telegram message, with mobile support
 
 ## 🛣️ Roadmap
 
@@ -72,7 +80,6 @@
 - [ ] Deep link and image indexing: web page summarization, OCR for images, AI-driven captions—powerful search & archival
 
 ### 🌐 Multi-platform Integration
-- [ ] Add Telegram Bot support for versatile message management
 - [ ] Expand to Discord and other major social/messaging platforms for unified search and backup
 
 
