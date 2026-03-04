@@ -134,6 +134,7 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 | `TELEGRAM_API_HASH` | [my.telegram.org](https://my.telegram.org/apps) で取得した Telegram アプリ Hash | `d524b414d21f4d37f08684c1df41ac9c`                    |
 | `DATABASE_TYPE`     | データベース種別。`postgres` または `pglite` を指定                             | `pglite`                                              |
 | `DATABASE_URL`      | PostgreSQL 用接続文字列（`DATABASE_TYPE=postgres`の場合のみ記入）               | `postgresql://postgres:123456@pgvector:5432/postgres` |
+| `TELEGRAM_BOT_TOKEN`| [@BotFather](https://t.me/BotFather) で作成した Bot トークン                    | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`           |
 | `PROXY_URL`         | 利用可能なプロキシ URL（例：`socks5://user:pass@host:port` など）               | `socks5://user:pass@host:port`                        |
 | `PORT`              | サーバー HTTP/WebSocket のリッスンポート                                        | `3333`                                                |
 | `HOST`              | サーバーのバインドアドレス                                                      | `0.0.0.0`                                             |

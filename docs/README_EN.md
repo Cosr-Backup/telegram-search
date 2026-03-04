@@ -143,6 +143,7 @@ All environment variables are optional. If not provided, the default values will
 | `TELEGRAM_API_HASH` | From [my.telegram.org](https://my.telegram.org/apps)         | `d524b414d21f4d37f08684c1df41ac9c`                    |
 | `DATABASE_TYPE`     | Database type: `postgres` or `pglite`                        | `pglite`                                              |
 | `DATABASE_URL`      | PostgreSQL connection string (`DATABASE_TYPE=postgres` only) | `postgresql://postgres:123456@pgvector:5432/postgres` |
+| `TELEGRAM_BOT_TOKEN`| Bot token from [@BotFather](https://t.me/BotFather)          | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`           |
 | `PROXY_URL`         | Proxy address (formats like `socks5://user:pass@host:port`)  | `socks5://user:pass@host:port`                        |
 | `PORT`              | Backend HTTP/WebSocket listening port                        | `3333`                                                |
 | `HOST`              | Backend listening address                                    | `0.0.0.0`                                             |

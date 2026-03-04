@@ -138,6 +138,7 @@ docker run -d --name telegram-search -p 3333:3333 ghcr.io/groupultra/telegram-se
 | `TELEGRAM_API_HASH` | 从 [my.telegram.org](https://my.telegram.org/apps) 获取的 Telegram 应用 Hash | `d524b414d21f4d37f08684c1df41ac9c`                    |
 | `DATABASE_TYPE`     | 数据库类型，可选 `postgres` 或 `pglite`                                      | `pglite`                                              |
 | `DATABASE_URL`      | PostgreSQL 连接字符串（仅在 `DATABASE_TYPE=postgres` 时填写）                | `postgresql://postgres:123456@pgvector:5432/postgres` |
+| `TELEGRAM_BOT_TOKEN`| 通过 [@BotFather](https://t.me/BotFather) 创建的 Telegram Bot Token          | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`           |
 | `PROXY_URL`         | 代理地址（支持如 `socks5://user:pass@host:port` 等格式）                     | `socks5://user:pass@host:port`                        |
 | `PORT`              | 后端服务 HTTP/WebSocket 监听端口                                             | `3333`                                                |
 | `HOST`              | 后端服务监听地址                                                             | `0.0.0.0`                                             |
