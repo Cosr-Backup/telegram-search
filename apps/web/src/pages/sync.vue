@@ -82,7 +82,7 @@ const chatsStore = useChatStore()
 const { chats, folders } = storeToRefs(chatsStore)
 
 const syncTaskStore = useSyncTaskStore()
-const { currentTask, currentTaskProgress, increase, chatStats, chatStatsLoading, etaSeconds } = storeToRefs(syncTaskStore)
+const { currentTask, currentTaskProgress, increase, chatStats, chatStatsLoading, etaSeconds, takeoutConfirmNeeded } = storeToRefs(syncTaskStore)
 
 // Currently focused chat id for status panel; independent from multi-selection
 const activeChatId = ref<number | null>(null)
@@ -332,6 +332,11 @@ function handleAbort() {
   else {
     toast.error(t('sync.noInProgressTask'))
   }
+}
+
+function handleTakeoutConfirm(useTakeout: boolean) {
+  takeoutConfirmNeeded.value = false
+  bridge.sendEvent(CoreEventType.TakeoutConfirmResponse, { useTakeout })
 }
 
 watch(currentTaskProgress, (progress) => {
@@ -671,6 +676,52 @@ watch(activeChatId, (chatId) => {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </Dialog>
+
+  <!-- Takeout Authorization Dialog -->
+  <Dialog v-model="takeoutConfirmNeeded" max-width="36rem" persistent>
+    <div class="space-y-5">
+      <div class="flex items-start gap-4">
+        <div class="h-12 w-12 flex shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/30">
+          <span class="i-lucide-shield-check h-6 w-6 text-primary" />
+        </div>
+        <div class="flex-1">
+          <h3 class="mb-1 text-base text-foreground font-semibold">
+            {{ t('sync.takeoutConfirmTitle') }}
+          </h3>
+          <p class="text-sm text-muted-foreground leading-relaxed">
+            {{ t('sync.takeoutConfirmDescription') }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Warning banner for GetHistory risk -->
+      <div class="flex items-start gap-3 border border-destructive/30 rounded-lg bg-destructive/5 p-3">
+        <span class="i-lucide-alert-triangle mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+        <p class="text-sm text-destructive leading-relaxed">
+          {{ t('sync.takeoutConfirmRisk') }}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <Button
+          icon="i-lucide-shield-off"
+          size="sm"
+          variant="outline"
+          class="border-destructive/40 text-destructive hover:bg-destructive/10"
+          @click="handleTakeoutConfirm(false)"
+        >
+          {{ t('sync.takeoutConfirmUseGetHistory') }}
+        </Button>
+        <Button
+          icon="i-lucide-shield-check"
+          size="sm"
+          @click="handleTakeoutConfirm(true)"
+        >
+          {{ t('sync.takeoutConfirmAuthorize') }}
+        </Button>
       </div>
     </div>
   </Dialog>

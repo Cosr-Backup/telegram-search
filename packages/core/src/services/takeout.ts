@@ -16,6 +16,7 @@ import { Api } from 'telegram'
 import { MESSAGE_PROCESS_BATCH_SIZE, TELEGRAM_HISTORY_INTERVAL_MS } from '../constants'
 import { CoreEventType } from '../types/events'
 import { createMinIntervalWaiter } from '../utils/min-interval'
+import { waitForEvent } from '../utils/promise'
 import { createTask } from '../utils/task'
 
 export type TakeoutService = ReturnType<typeof createTakeoutService>
@@ -183,16 +184,25 @@ export function createTakeoutService(
     // Try to initialize a takeout session. If it fails (timeout, flood-wait,
     // or other error), fall back to regular GetHistory calls. Takeout is
     // preferred because it avoids per-chat rate limits, but is not required.
+    // When skipTakeout is true the user has explicitly chosen GetHistory.
     let takeoutSession: Api.account.Takeout | undefined
 
-    try {
-      takeoutSession = await initTakeout()
-    }
-    catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error)
-      logger.withError(error).warn(`Takeout session init failed, falling back to regular GetHistory: ${errMsg}`)
+    if (options.skipTakeout) {
+      logger.log('Takeout skipped by user choice, using regular GetHistory')
       if (!options.disableAutoProgress) {
-        task.updateProgress(0, 'Takeout unavailable, using regular sync')
+        task.updateProgress(0, 'Using regular sync (takeout declined)')
+      }
+    }
+    else {
+      try {
+        takeoutSession = await initTakeout()
+      }
+      catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error)
+        logger.withError(error).warn(`Takeout session init failed, falling back to regular GetHistory: ${errMsg}`)
+        if (!options.disableAutoProgress) {
+          task.updateProgress(0, 'Takeout unavailable, using regular sync')
+        }
       }
     }
 
@@ -455,6 +465,12 @@ export function createTakeoutService(
     const { increase, syncOptions } = params
     const pagination = usePagination()
 
+    // Ask the user once per sync run whether to use takeout or fall back to
+    // GetHistory. Core emits the event and waits for the client to respond.
+    ctx.emitter.emit(CoreEventType.TakeoutConfirmNeeded)
+    const { useTakeout } = await waitForEvent(ctx.emitter, CoreEventType.TakeoutConfirmResponse)
+    const skipTakeout = !useTakeout
+
     if (chatIds.length === 0) {
       const accountId = ctx.getCurrentAccountId()
       const chats = (await chatModels.fetchChatsByAccountId(ctx.getDB(), accountId)).expect('Failed to fetch chats')
@@ -486,6 +502,7 @@ export function createTakeoutService(
             skipMedia: !syncOptions?.syncMedia,
             expectedCount: totalCount,
             disableAutoProgress: true,
+            skipTakeout,
             task,
             syncOptions,
           }
@@ -509,6 +526,7 @@ export function createTakeoutService(
             skipMedia: !syncOptions?.syncMedia,
             expectedCount: needToSyncCount,
             disableAutoProgress: true,
+            skipTakeout,
             task,
             syncOptions,
           }
@@ -530,6 +548,7 @@ export function createTakeoutService(
             skipMedia: !syncOptions?.syncMedia,
             expectedCount: needToSyncCount,
             disableAutoProgress: true,
+            skipTakeout,
             task,
             syncOptions,
           }
