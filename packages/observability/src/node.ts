@@ -44,7 +44,9 @@ export function registerOtel(options?: { debug?: true | DiagLogLevel, version?: 
   const sdk = new NodeSDK({
     instrumentations: [
       getNodeAutoInstrumentations(),
-      new PgInstrumentation(),
+      new PgInstrumentation({
+        enhancedDatabaseReporting: true,
+      }),
     ],
     metricReaders: [
       new PeriodicExportingMetricReader({

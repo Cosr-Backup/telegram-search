@@ -427,8 +427,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       '@proj-airi/drizzle-orm-browser-migrator':
-        specifier: ^0.1.4
-        version: 0.1.4(drizzle-orm@0.45.1(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.20.0)(postgres@3.4.8))
+        specifier: ^0.1.6
+        version: 0.1.6(drizzle-orm@0.45.1(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.20.0)(postgres@3.4.8))
       '@tg-search/common':
         specifier: workspace:*
         version: link:../common
@@ -2645,8 +2645,8 @@ packages:
   '@posthog/types@1.335.2':
     resolution: {integrity: sha512-cyl6eFrt0nR7lxb8+oGXyS16wDxQJz6awMWPyDB423lI+MiM64vz0VV5LNABahEc4BuytJzfEOyvyA3LPJ4hOQ==}
 
-  '@proj-airi/drizzle-orm-browser-migrator@0.1.4':
-    resolution: {integrity: sha512-xglys6t2+h62aLwAvIN7L4V/lUB3FkVSbm7nj8dCHQ+OxCSQtEPyjgiwqahlFBRg6n9/L/ASvD78ASk/2VT/RQ==}
+  '@proj-airi/drizzle-orm-browser-migrator@0.1.6':
+    resolution: {integrity: sha512-7A7Ay5vSLBer2P+Ydbrl9AktE7geIlh396zB/3a9odwI/1GT89Pljzvjz5SVxG0e17+wMOPLRKnTnCzukL1B9Q==}
     peerDependencies:
       drizzle-orm: '>=0.44.0'
 
@@ -9723,7 +9723,7 @@ snapshots:
 
   '@posthog/types@1.335.2': {}
 
-  '@proj-airi/drizzle-orm-browser-migrator@0.1.4(drizzle-orm@0.45.1(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.20.0)(postgres@3.4.8))':
+  '@proj-airi/drizzle-orm-browser-migrator@0.1.6(drizzle-orm@0.45.1(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.20.0)(postgres@3.4.8))':
     dependencies:
       '@guiiai/logg': 1.2.11
       drizzle-orm: 0.45.1(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.20.0)(postgres@3.4.8)
