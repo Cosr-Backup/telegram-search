@@ -106,9 +106,11 @@ export function createTakeoutService(
         ])
 
         logger.withFields({ takeoutId: result.id.toString() }).log('Takeout session initialized')
+        ctx.metrics?.takeoutSessionInitTotal.inc({ status: 'success' })
         return result
       }
       catch (error) {
+        ctx.metrics?.takeoutSessionInitTotal.inc({ status: timedOut ? 'timeout' : 'error' })
         // Init timed out, but the underlying request may still resolve later.
         // Clean up that late session so we don't leak server-side takeout sessions.
         if (timedOut) {
@@ -266,6 +268,7 @@ export function createTakeoutService(
       }
 
       const query = buildInvokeQuery(historyQuery, takeoutSession, range)
+      const fetchStart = performance.now()
       const result = await withSpan('takeout:fetchPage', () => {
         return ctx.getClient().invoke(query) as unknown as Promise<Api.messages.MessagesSlice>
       }, {
@@ -274,6 +277,9 @@ export function createTakeoutService(
         ...(range ? { rangeMinId: range.minId, rangeMaxId: range.maxId } : {}),
       })
 
+      ctx.metrics?.takeoutPageFetchTotal.inc()
+      ctx.metrics?.takeoutPageFetchDurationMs.observe({}, performance.now() - fetchStart)
+
       // Type safe check
       if (!('messages' in result)) {
         task.updateError(new Error('Invalid response format from Telegram API'))
@@ -281,6 +287,8 @@ export function createTakeoutService(
       }
 
       const messages = result.messages as Api.Message[]
+
+      ctx.metrics?.takeoutPageMessages.observe({}, messages.length)
 
       // If no messages returned, we've exhausted this range
       if (messages.length === 0) {
@@ -503,9 +511,7 @@ export function createTakeoutService(
         messages.push(message)
         downloadCount++
 
-        if (ctx.metrics) {
-          ctx.metrics.takeoutDownloadTotal.inc()
-        }
+        ctx.metrics?.takeoutDownloadTotal.inc()
 
         if (messages.length >= MESSAGE_PROCESS_BATCH_SIZE) {
           if (task.state.abortController.signal.aborted)
@@ -581,8 +587,11 @@ export function createTakeoutService(
       chatIds = chats.map(c => c.chat_id)
     }
 
+    ctx.metrics?.takeoutRunTotal.inc()
+
     for (const chatId of chatIds) {
       await withSpan('takeout:chat', async () => {
+        const chatStart = performance.now()
         const stats = (await chatMessageStatsModels.getChatMessageStatsByChatId(ctx.getDB(), ctx.getCurrentAccountId(), chatId))?.unwrap()
         const totalCount = (await getTotalMessageCount(chatId)) ?? 0
 
@@ -672,6 +681,7 @@ export function createTakeoutService(
         }
         finally {
           activeTasks.delete(task.state.taskId)
+          ctx.metrics?.takeoutChatDurationMs.observe({ chatId }, performance.now() - chatStart)
         }
       }, { chatId })
     }

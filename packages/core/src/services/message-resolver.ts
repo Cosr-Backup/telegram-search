@@ -125,8 +125,11 @@ export function createMessageResolverService(
               ctx.emitter.emit(CoreEventType.StorageRecordMessages, { messages: [message] })
             }
           }
+
+          ctx.metrics?.resolverOutcome.inc({ resolver: name, outcome: 'success' })
         }
         catch (error) {
+          ctx.metrics?.resolverOutcome.inc({ resolver: name, outcome: 'error' })
           logger.withError(error).warn('Failed to process messages')
         }
         finally {
@@ -137,9 +140,7 @@ export function createMessageResolverService(
             count: coreMessages.length,
           })
 
-          if (ctx.metrics) {
-            ctx.metrics.resolverDuration.observe({ resolver: name }, duration)
-          }
+          ctx.metrics?.resolverDuration.observe({ resolver: name }, duration)
         }
       }, { resolver: name, messageCount: coreMessages.length })
     }
@@ -147,17 +148,17 @@ export function createMessageResolverService(
     // Resolve enabled resolvers and preserve registration order.
     const allResolvers = Array.from(resolvers.registry.entries())
       .filter(([name]) => {
-        if (disabledResolvers.includes(name))
+        const shouldSkip = disabledResolvers.includes(name)
+          || (name === 'media' && (options.syncOptions?.skipMedia || options.syncOptions?.syncMedia === false))
+          || (name === 'embedding' && (options.syncOptions?.skipEmbedding))
+          || (name === 'jieba' && (options.syncOptions?.skipJieba))
+          // Photo embedding depends on media resolver, skip if media is disabled
+          || (name === 'photo-embedding' && (options.syncOptions?.skipMedia || options.syncOptions?.syncMedia === false))
+
+        if (shouldSkip) {
+          ctx.metrics?.resolverSkipped.inc({ resolver: name })
           return false
-        if (name === 'media' && (options.syncOptions?.skipMedia || options.syncOptions?.syncMedia === false))
-          return false
-        if (name === 'embedding' && (options.syncOptions?.skipEmbedding))
-          return false
-        if (name === 'jieba' && (options.syncOptions?.skipJieba))
-          return false
-        // Photo embedding depends on media resolver, skip if media is disabled
-        if (name === 'photo-embedding' && (options.syncOptions?.skipMedia || options.syncOptions?.syncMedia === false))
-          return false
+        }
         return true
       })
 
@@ -182,12 +183,10 @@ export function createMessageResolverService(
     }
 
     // Record batch duration if metrics sink is available (Node/server runtime only).
-    if (ctx.metrics) {
-      const durationMs = performance.now() - start
-      const source = options.takeout ? 'takeout' : 'realtime'
-      ctx.metrics.messageBatchDuration.observe({ source }, durationMs)
-      ctx.metrics.messagesProcessed.inc({ source }, coreMessages.length)
-    }
+    const durationMs = performance.now() - start
+    const source = options.takeout ? 'takeout' : 'realtime'
+    ctx.metrics?.messageBatchDuration.observe({ source }, durationMs)
+    ctx.metrics?.messagesProcessed.inc({ source }, coreMessages.length)
   }
 
   return {
