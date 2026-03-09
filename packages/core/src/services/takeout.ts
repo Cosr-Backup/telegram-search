@@ -10,6 +10,7 @@ import type { EntityService } from './entity'
 import bigInt from 'big-integer'
 
 import { usePagination } from '@tg-search/common'
+import { withSpan } from '@tg-search/observability'
 import { Err, Ok } from '@unbird/result'
 import { Api } from 'telegram'
 
@@ -63,82 +64,88 @@ export function createTakeoutService(
    * https://core.telegram.org/method/messages.getSplitRanges
    */
   async function getSplitRanges(): Promise<Api.MessageRange[]> {
-    const ranges = await ctx.getClient().invoke(new Api.messages.GetSplitRanges())
-    logger.withFields({ rangeCount: ranges.length }).log('Fetched split ranges')
-    return ranges
+    return withSpan('takeout:getSplitRanges', async () => {
+      const ranges = await ctx.getClient().invoke(new Api.messages.GetSplitRanges())
+      logger.withFields({ rangeCount: ranges.length }).log('Fetched split ranges')
+      return ranges
+    })
   }
 
   const TAKEOUT_INIT_TIMEOUT_MS = 30_000
 
   async function initTakeout(): Promise<Api.account.Takeout> {
-    const fileMaxSize = bigInt(1024 * 1024 * 1024) // 1GB
+    return withSpan('takeout:initSession', async () => {
+      const fileMaxSize = bigInt(1024 * 1024 * 1024) // 1GB
 
-    logger.log('Initializing takeout session...')
+      logger.log('Initializing takeout session...')
 
-    const invokePromise = ctx.getClient().invoke(new Api.account.InitTakeoutSession({
-      contacts: true,
-      messageUsers: true,
-      messageChats: true,
-      messageMegagroups: true,
-      messageChannels: true,
-      files: true,
-      fileMaxSize,
-    }))
+      const invokePromise = ctx.getClient().invoke(new Api.account.InitTakeoutSession({
+        contacts: true,
+        messageUsers: true,
+        messageChats: true,
+        messageMegagroups: true,
+        messageChannels: true,
+        files: true,
+        fileMaxSize,
+      }))
 
-    let timeoutHandle: ReturnType<typeof setTimeout> | undefined
-    let timedOut = false
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+      let timedOut = false
 
-    // Guard against indefinite hangs (e.g. connection overloaded by concurrent
-    // downloads, or Telegram silently ignoring the request).
-    try {
-      const result = await Promise.race([
-        invokePromise,
-        new Promise<never>((_, reject) => {
-          timeoutHandle = setTimeout(() => {
-            timedOut = true
-            reject(new Error('Takeout session init timed out after 30s'))
-          }, TAKEOUT_INIT_TIMEOUT_MS)
-        }),
-      ])
+      // Guard against indefinite hangs (e.g. connection overloaded by concurrent
+      // downloads, or Telegram silently ignoring the request).
+      try {
+        const result = await Promise.race([
+          invokePromise,
+          new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+              timedOut = true
+              reject(new Error('Takeout session init timed out after 30s'))
+            }, TAKEOUT_INIT_TIMEOUT_MS)
+          }),
+        ])
 
-      logger.withFields({ takeoutId: result.id.toString() }).log('Takeout session initialized')
-      return result
-    }
-    catch (error) {
-      // Init timed out, but the underlying request may still resolve later.
-      // Clean up that late session so we don't leak server-side takeout sessions.
-      if (timedOut) {
-        void invokePromise
-          .then(async (lateTakeout) => {
-            logger.withFields({ takeoutId: lateTakeout.id.toString() }).warn('Takeout session initialized after timeout, finishing late session')
-            try {
-              await finishTakeout(lateTakeout, false)
-            }
-            catch (finishError) {
-              logger.withError(finishError).warn('Failed to finish late takeout session')
-            }
-          })
-          .catch((lateError) => {
-            logger.withError(lateError).debug('Late takeout init rejected after timeout')
-          })
+        logger.withFields({ takeoutId: result.id.toString() }).log('Takeout session initialized')
+        return result
       }
+      catch (error) {
+        // Init timed out, but the underlying request may still resolve later.
+        // Clean up that late session so we don't leak server-side takeout sessions.
+        if (timedOut) {
+          void invokePromise
+            .then(async (lateTakeout) => {
+              logger.withFields({ takeoutId: lateTakeout.id.toString() }).warn('Takeout session initialized after timeout, finishing late session')
+              try {
+                await finishTakeout(lateTakeout, false)
+              }
+              catch (finishError) {
+                logger.withError(finishError).warn('Failed to finish late takeout session')
+              }
+            })
+            .catch((lateError) => {
+              logger.withError(lateError).debug('Late takeout init rejected after timeout')
+            })
+        }
 
-      throw error
-    }
-    finally {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle)
+        throw error
       }
-    }
+      finally {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle)
+        }
+      }
+    })
   }
 
   async function finishTakeout(takeout: Api.account.Takeout, success: boolean) {
-    await ctx.getClient().invoke(new Api.InvokeWithTakeout({
-      takeoutId: takeout.id,
-      query: new Api.account.FinishTakeoutSession({
-        success,
-      }),
-    }))
+    return withSpan('takeout:finishSession', () => {
+      return ctx.getClient().invoke(new Api.InvokeWithTakeout({
+        takeoutId: takeout.id,
+        query: new Api.account.FinishTakeoutSession({
+          success,
+        }),
+      }))
+    }, { success })
   }
 
   async function getHistoryWithMessagesCount(chatId: EntityLike): Promise<Result<Api.messages.TypeMessages & { count: number }>> {
@@ -259,7 +266,13 @@ export function createTakeoutService(
       }
 
       const query = buildInvokeQuery(historyQuery, takeoutSession, range)
-      const result = await ctx.getClient().invoke(query) as unknown as Api.messages.MessagesSlice
+      const result = await withSpan('takeout:fetchPage', () => {
+        return ctx.getClient().invoke(query) as unknown as Promise<Api.messages.MessagesSlice>
+      }, {
+        chatId,
+        offsetId,
+        ...(range ? { rangeMinId: range.minId, rangeMaxId: range.maxId } : {}),
+      })
 
       // Type safe check
       if (!('messages' in result)) {
@@ -422,6 +435,16 @@ export function createTakeoutService(
     onProcessed?: (count: number) => void,
     skipId?: number,
   ) {
+    return withSpan('takeout:processMessageBatch', () => processMessageBatchInner(task, generator, syncOptions, onProcessed, skipId))
+  }
+
+  async function processMessageBatchInner(
+    task: ReturnType<typeof createTask>,
+    generator: AsyncGenerator<Api.Message>,
+    syncOptions?: SyncOptions,
+    onProcessed?: (count: number) => void,
+    skipId?: number,
+  ) {
     let messages: Api.Message[] = []
     let downloadCount = 0
     let processedCount = 0
@@ -534,6 +557,14 @@ export function createTakeoutService(
     increase?: boolean
     syncOptions?: SyncOptions
   }) {
+    return withSpan('takeout:run', () => runTakeoutInner(params), { chatCount: params.chatIds.length })
+  }
+
+  async function runTakeoutInner(params: {
+    chatIds: string[]
+    increase?: boolean
+    syncOptions?: SyncOptions
+  }) {
     let { chatIds } = params
     const { increase, syncOptions } = params
     const pagination = usePagination()
@@ -551,96 +582,98 @@ export function createTakeoutService(
     }
 
     for (const chatId of chatIds) {
-      const stats = (await chatMessageStatsModels.getChatMessageStatsByChatId(ctx.getDB(), ctx.getCurrentAccountId(), chatId))?.unwrap()
-      const totalCount = (await getTotalMessageCount(chatId)) ?? 0
+      await withSpan('takeout:chat', async () => {
+        const stats = (await chatMessageStatsModels.getChatMessageStatsByChatId(ctx.getDB(), ctx.getCurrentAccountId(), chatId))?.unwrap()
+        const totalCount = (await getTotalMessageCount(chatId)) ?? 0
 
-      logger.withFields({ chatId, totalCount, hasStats: !!stats }).log('Starting takeout for chat')
+        logger.withFields({ chatId, totalCount, hasStats: !!stats }).log('Starting takeout for chat')
 
-      const task = createTask('takeout', { chatIds: [chatId], totalMessages: totalCount }, ctx.emitter, logger)
-      activeTasks.set(task.state.taskId, task)
+        const task = createTask('takeout', { chatIds: [chatId], totalMessages: totalCount }, ctx.emitter, logger)
+        activeTasks.set(task.state.taskId, task)
 
-      try {
-        const updateProgress = (count: number, expected: number) => {
-          const progress = expected > 0 ? Number(((count / expected) * 100).toFixed(2)) : 0
-          task.updateProgress(progress, `Processed ${count}/${expected} messages`)
+        try {
+          const updateProgress = (count: number, expected: number) => {
+            const progress = expected > 0 ? Number(((count / expected) * 100).toFixed(2)) : 0
+            task.updateProgress(progress, `Processed ${count}/${expected} messages`)
+          }
+
+          if (!increase || !stats || (stats.first_message_id === 0 && stats.latest_message_id === 0)) {
+            const opts = {
+              pagination: { ...pagination, offset: 0 },
+              minId: normalizeId(syncOptions?.minMessageId, 0),
+              maxId: normalizeId(syncOptions?.maxMessageId, 0),
+              startTime: syncOptions?.startTime,
+              endTime: syncOptions?.endTime,
+              skipMedia: !syncOptions?.syncMedia,
+              expectedCount: totalCount,
+              disableAutoProgress: true,
+              skipTakeout,
+              task,
+              syncOptions,
+            }
+            await processMessageBatch(task, takeoutMessages(chatId, opts), syncOptions, (c) => {
+              updateProgress(c, totalCount)
+            })
+          }
+          else {
+            const needToSyncCount = Math.max(0, totalCount - stats.message_count)
+            task.updateProgress(0, 'Starting incremental sync')
+
+            const latestMessageId = normalizeId(stats.latest_message_id, 0)
+            let backwardProcessed = 0
+            // Phase 1: Backward
+            const backwardOpts = {
+              pagination: { ...pagination, offset: 0 },
+              minId: normalizeId(syncOptions?.minMessageId ?? latestMessageId, 0),
+              maxId: normalizeId(syncOptions?.maxMessageId, 0),
+              startTime: syncOptions?.startTime,
+              endTime: syncOptions?.endTime,
+              skipMedia: !syncOptions?.syncMedia,
+              expectedCount: needToSyncCount,
+              disableAutoProgress: true,
+              skipTakeout,
+              task,
+              syncOptions,
+            }
+            const ok = await processMessageBatch(task, takeoutMessages(chatId, backwardOpts), syncOptions, (c) => {
+              backwardProcessed = c
+              updateProgress(backwardProcessed, needToSyncCount)
+            }, latestMessageId > 0 ? latestMessageId : undefined)
+
+            if (!ok)
+              return
+
+            // Phase 2: Forward
+            const forwardOpts = {
+              pagination: { ...pagination, offset: normalizeId(stats.first_message_id, 0) },
+              minId: normalizeId(syncOptions?.minMessageId, 0),
+              maxId: normalizeId(syncOptions?.maxMessageId, 0),
+              startTime: syncOptions?.startTime,
+              endTime: syncOptions?.endTime,
+              skipMedia: !syncOptions?.syncMedia,
+              expectedCount: needToSyncCount,
+              disableAutoProgress: true,
+              skipTakeout,
+              task,
+              syncOptions,
+            }
+            await processMessageBatch(task, takeoutMessages(chatId, forwardOpts), syncOptions, (c) => {
+              updateProgress(backwardProcessed + c, needToSyncCount)
+            })
+
+            if (!task.state.abortController.signal.aborted) {
+              task.updateProgress(100, 'Incremental sync completed')
+            }
+          }
         }
-
-        if (!increase || !stats || (stats.first_message_id === 0 && stats.latest_message_id === 0)) {
-          const opts = {
-            pagination: { ...pagination, offset: 0 },
-            minId: normalizeId(syncOptions?.minMessageId, 0),
-            maxId: normalizeId(syncOptions?.maxMessageId, 0),
-            startTime: syncOptions?.startTime,
-            endTime: syncOptions?.endTime,
-            skipMedia: !syncOptions?.syncMedia,
-            expectedCount: totalCount,
-            disableAutoProgress: true,
-            skipTakeout,
-            task,
-            syncOptions,
-          }
-          await processMessageBatch(task, takeoutMessages(chatId, opts), syncOptions, (c) => {
-            updateProgress(c, totalCount)
-          })
+        catch (error) {
+          logger.withError(error).withFields({ chatId }).error('Takeout failed for chat')
+          task.updateError(error)
         }
-        else {
-          const needToSyncCount = Math.max(0, totalCount - stats.message_count)
-          task.updateProgress(0, 'Starting incremental sync')
-
-          const latestMessageId = normalizeId(stats.latest_message_id, 0)
-          let backwardProcessed = 0
-          // Phase 1: Backward
-          const backwardOpts = {
-            pagination: { ...pagination, offset: 0 },
-            minId: normalizeId(syncOptions?.minMessageId ?? latestMessageId, 0),
-            maxId: normalizeId(syncOptions?.maxMessageId, 0),
-            startTime: syncOptions?.startTime,
-            endTime: syncOptions?.endTime,
-            skipMedia: !syncOptions?.syncMedia,
-            expectedCount: needToSyncCount,
-            disableAutoProgress: true,
-            skipTakeout,
-            task,
-            syncOptions,
-          }
-          const ok = await processMessageBatch(task, takeoutMessages(chatId, backwardOpts), syncOptions, (c) => {
-            backwardProcessed = c
-            updateProgress(backwardProcessed, needToSyncCount)
-          }, latestMessageId > 0 ? latestMessageId : undefined)
-
-          if (!ok)
-            continue
-
-          // Phase 2: Forward
-          const forwardOpts = {
-            pagination: { ...pagination, offset: normalizeId(stats.first_message_id, 0) },
-            minId: normalizeId(syncOptions?.minMessageId, 0),
-            maxId: normalizeId(syncOptions?.maxMessageId, 0),
-            startTime: syncOptions?.startTime,
-            endTime: syncOptions?.endTime,
-            skipMedia: !syncOptions?.syncMedia,
-            expectedCount: needToSyncCount,
-            disableAutoProgress: true,
-            skipTakeout,
-            task,
-            syncOptions,
-          }
-          await processMessageBatch(task, takeoutMessages(chatId, forwardOpts), syncOptions, (c) => {
-            updateProgress(backwardProcessed + c, needToSyncCount)
-          })
-
-          if (!task.state.abortController.signal.aborted) {
-            task.updateProgress(100, 'Incremental sync completed')
-          }
+        finally {
+          activeTasks.delete(task.state.taskId)
         }
-      }
-      catch (error) {
-        logger.withError(error).withFields({ chatId }).error('Takeout failed for chat')
-        task.updateError(error)
-      }
-      finally {
-        activeTasks.delete(task.state.taskId)
-      }
+      }, { chatId })
     }
   }
 

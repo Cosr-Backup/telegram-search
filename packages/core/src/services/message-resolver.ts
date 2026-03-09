@@ -5,6 +5,8 @@ import type { CoreContext } from '../context'
 import type { MessageResolver, MessageResolverRegistryFn } from '../message-resolvers'
 import type { SyncOptions } from '../types/events'
 
+import { withSpan } from '@tg-search/observability'
+
 import { chatMessageModels } from '../models/chat-message'
 import { CoreEventType } from '../types/events'
 import { convertToCoreMessage } from '../utils/message'
@@ -20,6 +22,22 @@ export function createMessageResolverService(
 
   // TODO: worker_threads?
   async function processMessages(
+    messages: Api.Message[],
+    options: {
+      takeout?: boolean
+      syncOptions?: SyncOptions
+      forceRefetch?: boolean
+      batchId?: string
+    } = {},
+  ) {
+    return withSpan('resolver:processMessages', () => processMessagesInner(messages, options), {
+      messageCount: messages.length,
+      ...(options.takeout != null ? { takeout: options.takeout } : {}),
+      ...(options.batchId != null ? { batchId: options.batchId } : {}),
+    })
+  }
+
+  async function processMessagesInner(
     messages: Api.Message[],
     options: {
       takeout?: boolean
@@ -79,49 +97,51 @@ export function createMessageResolverService(
     const resolverSpans: Array<{ name: string, duration: number, count: number }> = []
 
     const executeResolver = async (name: string, resolver: MessageResolver) => {
-      const resolverStart = performance.now()
-      logger.withFields({ name }).verbose('Process messages with resolver')
+      return withSpan(`resolver:${name}`, async () => {
+        const resolverStart = performance.now()
+        logger.withFields({ name }).verbose('Process messages with resolver')
 
-      const opts = {
-        messages: coreMessages,
-        rawMessages: messages,
-        syncOptions: options.syncOptions,
-        forceRefetch: options.forceRefetch,
-      }
-
-      try {
-        if (resolver.run) {
-          const result = (await resolver.run(opts)).unwrap()
-
-          if (result.length > 0) {
-            ctx.emitter.emit(CoreEventType.StorageRecordMessages, { messages: result })
-          }
+        const opts = {
+          messages: coreMessages,
+          rawMessages: messages,
+          syncOptions: options.syncOptions,
+          forceRefetch: options.forceRefetch,
         }
-        else if (resolver.stream) {
-          for await (const message of resolver.stream(opts)) {
-            if (!options.takeout) {
-              ctx.emitter.emit(CoreEventType.MessageData, { messages: [message] })
+
+        try {
+          if (resolver.run) {
+            const result = (await resolver.run(opts)).unwrap()
+
+            if (result.length > 0) {
+              ctx.emitter.emit(CoreEventType.StorageRecordMessages, { messages: result })
             }
+          }
+          else if (resolver.stream) {
+            for await (const message of resolver.stream(opts)) {
+              if (!options.takeout) {
+                ctx.emitter.emit(CoreEventType.MessageData, { messages: [message] })
+              }
 
-            ctx.emitter.emit(CoreEventType.StorageRecordMessages, { messages: [message] })
+              ctx.emitter.emit(CoreEventType.StorageRecordMessages, { messages: [message] })
+            }
           }
         }
-      }
-      catch (error) {
-        logger.withError(error).warn('Failed to process messages')
-      }
-      finally {
-        const duration = performance.now() - resolverStart
-        resolverSpans.push({
-          name,
-          duration,
-          count: coreMessages.length,
-        })
-
-        if (ctx.metrics) {
-          ctx.metrics.resolverDuration.observe({ resolver: name }, duration)
+        catch (error) {
+          logger.withError(error).warn('Failed to process messages')
         }
-      }
+        finally {
+          const duration = performance.now() - resolverStart
+          resolverSpans.push({
+            name,
+            duration,
+            count: coreMessages.length,
+          })
+
+          if (ctx.metrics) {
+            ctx.metrics.resolverDuration.observe({ resolver: name }, duration)
+          }
+        }
+      }, { resolver: name, messageCount: coreMessages.length })
     }
 
     // Resolve enabled resolvers and preserve registration order.
