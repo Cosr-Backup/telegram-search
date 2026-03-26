@@ -6,10 +6,12 @@ import { useI18n } from 'vue-i18n'
 
 import MessageBubble from './messages/MessageBubble.vue'
 
+type LoadStatus = 'fetched' | 'skipped' | void
+
 interface Props {
   messages: CoreMessage[]
-  onScrollToTop?: () => void
-  onScrollToBottom?: () => void
+  onScrollToTop?: () => LoadStatus | Promise<LoadStatus>
+  onScrollToBottom?: () => LoadStatus | Promise<LoadStatus>
   autoScrollToBottom?: boolean
   debug?: boolean
 }
@@ -41,6 +43,7 @@ let bottomLoadArmed = true
 let topLoadPending = false
 let topLoadCooldownUntil = 0
 let topLoadRequiresLeave = false
+let topLoadRequestId = 0
 
 // Track if we're at top/bottom to prevent repeated callbacks
 const isAtTop = ref(false)
@@ -52,8 +55,23 @@ const TOP_LOAD_COOLDOWN_MS = 240
 function debugLog(label: string, data?: Record<string, unknown>) {
   if (!props.debug)
     return
+
   // eslint-disable-next-line no-console
   console.log(`[MessageList] ${label}`, data ?? '')
+}
+
+function finalizeTopLoad(requestId: number, reason: 'restore' | 'no-new-messages') {
+  if (!topLoadPending || requestId !== topLoadRequestId)
+    return
+
+  topLoadPending = false
+  topLoadCooldownUntil = Date.now() + TOP_LOAD_COOLDOWN_MS
+
+  if (reason === 'no-new-messages') {
+    pendingTopAnchorUuid = null
+    pendingTopAnchorScrollTop = null
+    debugLog('complete-top-load', { reason })
+  }
 }
 
 function getFirstVisibleMessageUuid() {
@@ -87,8 +105,8 @@ watch(() => props.messages, async (newMessages, oldMessages) => {
     const el = scrollContainerRef.value
     const anchorUuid = pendingTopAnchorUuid
     const anchorScrollTop = pendingTopAnchorScrollTop
-    topLoadPending = false
-    topLoadCooldownUntil = Date.now() + TOP_LOAD_COOLDOWN_MS
+    const requestId = topLoadRequestId
+    finalizeTopLoad(requestId, 'restore')
     pendingTopAnchorUuid = null
     pendingTopAnchorScrollTop = null
 
@@ -222,6 +240,8 @@ function setupBoundaryObservers() {
 
       topLoadArmed = false
       topLoadPending = true
+      topLoadRequestId += 1
+      const requestId = topLoadRequestId
       const anchorUuid = getFirstVisibleMessageUuid()
       debugLog('trigger-load-older', {
         scrollTop: root.scrollTop,
@@ -231,7 +251,29 @@ function setupBoundaryObservers() {
       })
       pendingTopAnchorUuid = anchorUuid
       pendingTopAnchorScrollTop = root.scrollTop
-      props.onScrollToTop()
+      void Promise.resolve(props.onScrollToTop()).then(async (status) => {
+        // If the caller skipped (e.g. already loading), reset the state
+        // machine so it can re-arm on the next scroll movement.
+        if (status === 'skipped') {
+          topLoadPending = false
+          topLoadArmed = true
+          pendingTopAnchorUuid = null
+          pendingTopAnchorScrollTop = null
+          return
+        }
+        // Wait for the DOM update cycle so the message watch can fire
+        // first if new messages arrived.
+        await nextTick()
+        await nextTick()
+        // If topLoadPending is still true here, no new messages were
+        // added (the watch didn't fire), so finalize explicitly.
+        if (topLoadPending && requestId === topLoadRequestId) {
+          finalizeTopLoad(requestId, 'no-new-messages')
+        }
+      }).catch(() => {
+        // On error, reset so the user can retry
+        finalizeTopLoad(requestId, 'no-new-messages')
+      })
     },
     {
       root,
