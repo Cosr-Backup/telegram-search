@@ -253,6 +253,12 @@
     "save": "保存",
     "savingSettings": "保存设置中",
     "settings": "设置",
+    "loadingSettings": "正在加载设置",
+    "loadingSettingsDescription": "正在同步当前设置，请稍候。",
+    "loadingSettingsFailed": "加载设置失败",
+    "loadingSettingsFailedDescription": "暂时无法加载当前设置，请检查连接后重试。",
+    "retryLoadingSettings": "重新加载",
+    "settingsSaveFailed": "保存设置失败",
     "settingsSavedSuccessfully": "设置保存成功",
     "switchAccount": "切换账号",
     "switchToDarkMode": "切换到暗色模式",
@@ -262,7 +268,8 @@
     "useCachedMessage": "使用数据库缓存的聊天记录",
     "userResolver": "用户解析器",
     "enablePhotoEmbedding": "启用图片 Embedding",
-    "enablePhotoEmbeddingDescription": "使用多模态大模型将图片转换为描述，再进行向量化以支持图片语义搜索"
+    "enablePhotoEmbeddingDescription": "使用多模态大模型将图片转换为描述，再进行向量化以支持图片语义搜索",
+    "waitingForConnection": "当前账号还没有完成连接，暂时无法从后端读取设置。"
   },
   "sync": {
     "cancel": "取消",
@@ -320,11 +327,13 @@
     "syncRangeDescription": "选择要同步的消息范围",
     "syncVisualization": "同步状态可视化",
     "syncedMessages": "已同步消息",
+    "completedRatio": "已完成",
     "syncing": "同步中...",
     "selectDateRange": "选择时间范围",
     "timeRange": "时间范围",
     "totalMessages": "总消息数",
     "unsyncedMessages": "未同步消息",
+    "remainingRatio": "剩余",
     "selectChatToViewStats": "选择聊天以查看同步统计信息"
   },
   "summaryDialog": {
