@@ -7,8 +7,9 @@ export const useSyncTaskStore = defineStore('sync-task', () => {
   const increase = ref(false)
   const currentTask = ref<CoreTaskData<'takeout'>>()
   const chatStats = ref<ChatSyncStats>()
+  const chatStatsByChatId = ref<Record<string, ChatSyncStats>>({})
+  const chatStatsFocusedChatId = ref<string | null>(null)
   const chatStatsLoading = ref(false)
-  const initialSyncedMessages = ref<number>(0)
   const etaSeconds = ref<number | null>(null)
   /** True when core is waiting for the user to choose takeout vs GetHistory. */
   const takeoutConfirmNeeded = ref(false)
@@ -25,8 +26,9 @@ export const useSyncTaskStore = defineStore('sync-task', () => {
     currentTaskProgress,
     increase,
     chatStats,
+    chatStatsByChatId,
+    chatStatsFocusedChatId,
     chatStatsLoading,
-    initialSyncedMessages,
     etaSeconds,
     takeoutConfirmNeeded,
   }
