@@ -3,7 +3,7 @@
   "type": "module",
   "version": "1.2.4",
   "private": true,
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=24.13.0"
   },
@@ -38,24 +38,24 @@
     "postinstall": "pnpm run packages:build"
   },
   "dependencies": {
-    "@dotenvx/dotenvx": "^1.52.0",
+    "@dotenvx/dotenvx": "^1.61.0",
     "@guiiai/logg": "catalog:"
   },
   "devDependencies": {
     "@moeru/eslint-config": "0.1.0-beta.15",
-    "@types/node": "^25.0.10",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "@vitest/ui": "4.0.18",
-    "bumpp": "^10.4.0",
+    "bumpp": "^10.4.1",
     "concurrently": "^9.2.1",
-    "drizzle-kit": "^0.31.8",
-    "eslint": "^9.39.2",
-    "happy-dom": "^20.3.9",
-    "taze": "^19.9.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.4",
+    "happy-dom": "^20.8.9",
+    "taze": "^19.11.0",
     "tsdown": "catalog:",
-    "turbo": "^2.8.15",
+    "turbo": "^2.9.5",
     "typescript": "^5.9.3",
-    "vite": "^8.0.0-beta.10",
-    "vitest": "^4.0.18"
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4"
   }
 }

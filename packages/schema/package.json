@@ -15,6 +15,6 @@
     "build": "tsdown"
   },
   "devDependencies": {
-    "@proj-airi/unplugin-drizzle-orm-migrations": "^0.1.4"
+    "@proj-airi/unplugin-drizzle-orm-migrations": "^0.1.6"
   }
 }
