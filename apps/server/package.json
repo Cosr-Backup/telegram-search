@@ -60,12 +60,12 @@
     "@tg-search/common": "workspace:*",
     "@tg-search/core": "workspace:*",
     "@unbird/result": "catalog:",
-    "crossws": "^0.4.4",
+    "crossws": "^0.4.6",
     "figlet": "^1.11.0",
     "file-type": "^21.3.4",
-    "h3": "^2.0.1-rc.20",
+    "h3": "^2.0.1-rc.22",
     "minio": "^8.0.7",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.2"
   },
   "devDependencies": {
     "pathe": "^2.0.3",
