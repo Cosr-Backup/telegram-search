@@ -63,6 +63,27 @@ describe('telegram CLI retry policy', () => {
     expect(wait).not.toHaveBeenCalled()
   })
 
+  it('returns Takeout authorization requirements to the Agent without retrying', async () => {
+    const authorizationRequired = {
+      ok: false as const,
+      error: {
+        code: 'TAKEOUT_AUTHORIZATION_REQUIRED',
+        message: 'Authorize the export request in Telegram',
+        retryable: false,
+        retryAfterSeconds: 86400,
+        details: { action: 'authorize_takeout_in_telegram' },
+      },
+    }
+    const operation = vi.fn(async () => authorizationRequired)
+    const wait = vi.fn(async () => {})
+
+    const result = await retryTelegramResult(operation, { sleep: wait })
+
+    expect(result).toEqual(authorizationRequired)
+    expect(operation).toHaveBeenCalledOnce()
+    expect(wait).not.toHaveBeenCalled()
+  })
+
   it('classifies thrown network failures before retrying', async () => {
     const networkError = Object.assign(new Error('connection reset'), { code: 'ECONNRESET' })
     const operation = vi.fn()

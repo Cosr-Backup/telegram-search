@@ -312,4 +312,37 @@ describe('models/chat-message', () => {
       expect(message.media?.[0].type).toBe('photo')
     })
   })
+
+  it('fetches reply targets by chat-scoped Telegram message ID', async () => {
+    // Telegram message IDs repeat across chats, so reply hydration must match
+    // both the chat and platform message ID.
+    const db = await setupDb()
+    const [account] = await db.insert(accountsTable).values({
+      platform: 'telegram',
+      platform_user_id: 'user-1',
+    }).returning()
+    const chats = await db.insert(joinedChatsTable).values([
+      { platform: 'telegram', chat_id: 'chat-a', chat_name: 'Chat A', chat_type: 'group' },
+      { platform: 'telegram', chat_id: 'chat-b', chat_name: 'Chat B', chat_type: 'group' },
+    ]).returning()
+    await db.insert(chatMessagesTable).values(chats.map((chat, index) => ({
+      platform: 'telegram',
+      platform_message_id: '7',
+      from_id: `sender-${index}`,
+      from_name: `Sender ${index}`,
+      in_chat_id: chat.chat_id,
+      in_chat_type: 'group' as const,
+      content: `content-${chat.chat_id}`,
+      platform_timestamp: index + 1,
+    })))
+
+    const result = (await chatMessageModels.fetchMessagesByChatAndPlatformIds(
+      db,
+      account.id,
+      [{ chatId: 'chat-a', messageId: '7' }],
+    )).unwrap()
+
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ in_chat_id: 'chat-a', platform_message_id: '7', content: 'content-chat-a' })
+  })
 })

@@ -17,7 +17,9 @@ describe('telegram application error classification', () => {
     })
   })
 
-  it('preserves Telegram takeout delays', () => {
+  it('turns Telegram takeout delays into an explicit user authorization action', () => {
+    // TAKEOUT_INIT_DELAY previously looked like an ordinary retryable wait, so
+    // Agents could sleep instead of asking the user to authorize the export.
     const error = toAppError({
       code: 420,
       errorMessage: 'TAKEOUT_INIT_DELAY_86400',
@@ -25,9 +27,14 @@ describe('telegram application error classification', () => {
     })
 
     expect(error).toMatchObject({
-      code: 'TAKEOUT_INIT_DELAY',
-      retryable: true,
+      code: 'TAKEOUT_AUTHORIZATION_REQUIRED',
+      message: expect.stringContaining('authorize the export request'),
+      retryable: false,
       retryAfterSeconds: 86400,
+      details: {
+        action: 'authorize_takeout_in_telegram',
+        telegramError: 'TAKEOUT_INIT_DELAY_86400',
+      },
     })
   })
 

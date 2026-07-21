@@ -14,6 +14,7 @@ Use the CLI as a local-first data tool. Let the agent compose atomic commands; d
 - Use local `messages query`, `search`, `context`, `stats`, and `export` without connecting to Telegram.
 - Use `sync --takeout` for message persistence and bulk history. Add `--takeout` only after the user explicitly approves the selected chats, time range, and data scope.
 - Stop when consent is missing or Telegram delays/rejects Takeout. Never fall back to ordinary history reads for bulk synchronization.
+- Treat `TAKEOUT_AUTHORIZATION_REQUIRED` as a blocking user action, not a retryable delay. Ask the user to review and authorize the pending data export request on one of their Telegram devices. Resume `sync --takeout` only after the user confirms and Telegram allows it; never sleep and retry automatically.
 - Never request or expose API hashes, login codes, 2FA passwords, StringSessions, private chat names, or message text in reports.
 - Never send messages or modify Telegram data.
 

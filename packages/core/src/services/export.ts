@@ -1,4 +1,4 @@
-import type { CursorPage, ExportInput, ExportUpdate, MessageRecord } from '@tg-search/protocol'
+import type { CursorPage, ExportInput, ExportMessageRecord, ExportUpdate } from '@tg-search/protocol'
 
 import { createHash } from 'node:crypto'
 import { appendFile, mkdir, rename, rm, writeFile } from 'node:fs/promises'
@@ -14,7 +14,7 @@ function assertNotAborted(signal?: AbortSignal) {
   }
 }
 
-export function createExportService(fetchPage: (cursor?: string) => Promise<CursorPage<MessageRecord>>) {
+export function createExportService(fetchPage: (cursor?: string) => Promise<CursorPage<ExportMessageRecord>>) {
   return async function* exportMessages(input: ExportInput, signal?: AbortSignal): AsyncGenerator<ExportUpdate> {
     const taskId = uuidv4()
     yield { type: 'started', taskId }
@@ -85,7 +85,7 @@ export function createExportService(fetchPage: (cursor?: string) => Promise<Curs
     }
 
     const manifest = JSON.stringify({
-      version: 1,
+      version: 2,
       format: input.format,
       timeZone: input.timeZone,
       exported,

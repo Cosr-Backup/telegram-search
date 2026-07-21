@@ -1,4 +1,4 @@
-import type { MessageRecord } from '@tg-search/protocol'
+import type { ExportMessageRecord, MessageRecord } from '@tg-search/protocol'
 
 import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -38,12 +38,39 @@ describe('local JSONL export', () => {
     expect(await readFile(join(outputDir, '2026-01.jsonl'), 'utf8')).toContain('"id":"1"')
     expect(await readFile(join(outputDir, '2026-02.jsonl'), 'utf8')).toContain('"id":"2"')
     const manifest = JSON.parse(await readFile(join(outputDir, 'manifest.json'), 'utf8'))
+    expect(manifest.version).toBe(2)
     expect(manifest.timeZone).toBe('UTC')
     expect(manifest.files).toEqual([
       expect.objectContaining({ file: '2026-01.jsonl', count: 1, sha256: expect.any(String) }),
       expect.objectContaining({ file: '2026-02.jsonl', count: 1, sha256: expect.any(String) }),
     ])
     expect(updates.at(-1)).toMatchObject({ type: 'completed', exported: 2 })
+  })
+
+  it('serializes one-level replied-to message content', async () => {
+    const outputDir = await mkdtemp(join(tmpdir(), 'tg-search-export-reply-'))
+    const target = message('1', 'chat-1', 1767225500)
+    const reply: ExportMessageRecord = {
+      ...message('2', 'chat-1', 1767225600),
+      replyToId: target.id,
+      replyTo: target,
+    }
+
+    for await (const _update of createExportService(async () => ({ items: [reply], nextCursor: null }))({
+      outputDir,
+      format: 'jsonl',
+      timeZone: 'UTC',
+    })) {
+      // Consume the stream so the JSONL file is finalized.
+    }
+
+    const exported = JSON.parse((await readFile(join(outputDir, '2026-01.jsonl'), 'utf8')).trim())
+    expect(exported).toMatchObject({
+      id: '2',
+      replyToId: '1',
+      replyTo: { id: '1', chatId: 'chat-1', text: '1' },
+    })
+    expect(exported.replyTo).not.toHaveProperty('replyTo')
   })
 
   it('groups month files in the explicitly selected time zone', async () => {

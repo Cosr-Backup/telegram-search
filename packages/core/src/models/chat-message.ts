@@ -13,7 +13,7 @@ import type { PhotoModels } from './photos'
 import type { DBRetrievalMessages } from './utils/message'
 import type { DBInsertMessage, DBSelectMessage } from './utils/types'
 
-import { and, asc, desc, eq, gt, gte, inArray, lt, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql } from 'drizzle-orm'
 
 import { accountJoinedChatsTable } from '../schemas/account-joined-chats'
 import { chatMessagesTable } from '../schemas/chat-messages'
@@ -392,6 +392,53 @@ async function fetchMessagesByTimeRange(
 }
 
 /**
+ * Fetch Telegram messages by their chat-scoped platform IDs.
+ * Telegram message IDs are only unique within a chat, so matching IDs without
+ * their chat would attach unrelated content to exported replies.
+ */
+async function fetchMessagesByChatAndPlatformIds(
+  db: CoreDB,
+  accountId: string,
+  references: Array<{ chatId: string, messageId: string }>,
+): PromiseResult<DBSelectMessage[]> {
+  return withResult(async () => {
+    const messageIdsByChat = new Map<string, Set<string>>()
+    for (const { chatId, messageId } of references) {
+      if (!chatId || !messageId)
+        continue
+      const messageIds = messageIdsByChat.get(chatId) ?? new Set<string>()
+      messageIds.add(messageId)
+      messageIdsByChat.set(chatId, messageIds)
+    }
+
+    if (messageIdsByChat.size === 0)
+      return []
+
+    const referenceCondition = or(...Array.from(messageIdsByChat, ([chatId, messageIds]) => and(
+      eq(chatMessagesTable.in_chat_id, chatId),
+      inArray(chatMessagesTable.platform_message_id, Array.from(messageIds)),
+    )))
+
+    const results = await db
+      .select({ chat_messages: chatMessagesTable })
+      .from(chatMessagesTable)
+      .innerJoin(joinedChatsTable, eq(chatMessagesTable.in_chat_id, joinedChatsTable.chat_id))
+      .where(and(
+        eq(chatMessagesTable.platform, 'telegram'),
+        referenceCondition,
+        notDeletedCondition(),
+        sql`(
+          ${joinedChatsTable.chat_type} != 'user'
+          OR ${chatMessagesTable.owner_account_id} = ${accountId}
+          OR ${chatMessagesTable.owner_account_id} IS NULL
+        )`,
+      ))
+
+    return results.map(row => row.chat_messages)
+  })
+}
+
+/**
  * Fetch messages by their IDs
  */
 async function fetchMessagesByIds(
@@ -508,6 +555,7 @@ export const chatMessageModels = {
   softDeleteMessages,
   fetchMessages,
   fetchMessagesByIds,
+  fetchMessagesByChatAndPlatformIds,
   fetchEditedMessageIds,
   fetchMessagesByTimeRange,
   fetchMessagesWithPhotos,

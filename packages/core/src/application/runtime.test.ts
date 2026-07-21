@@ -210,7 +210,7 @@ describe('telegram application runtime remote boundaries', () => {
     expect(harness.getMessages).not.toHaveBeenCalled()
   })
 
-  it('reports Telegram takeout delays as retryable structured errors', async () => {
+  it('reports Telegram takeout delays as a user authorization requirement', async () => {
     const harness = createHarness()
     harness.takeoutMessages.mockImplementation(async function* (_chatId, options) {
       options.task.updateError(new Error('420: TAKEOUT_INIT_DELAY_86400 (caused by account.InitTakeoutSession)'))
@@ -225,9 +225,11 @@ describe('telegram application runtime remote boundaries', () => {
     expect(updates.at(-1)).toMatchObject({
       type: 'failed',
       error: {
-        code: 'TAKEOUT_INIT_DELAY',
-        retryable: true,
+        code: 'TAKEOUT_AUTHORIZATION_REQUIRED',
+        message: expect.stringContaining('authorize the export request'),
+        retryable: false,
         retryAfterSeconds: 86400,
+        details: { action: 'authorize_takeout_in_telegram' },
       },
     })
     expect(harness.getMessages).not.toHaveBeenCalled()

@@ -1,6 +1,7 @@
 import type { InferOutput } from 'valibot'
 
 import type { AppError } from './errors'
+import type { MessageRecord } from './messages'
 
 import { defineInvokeEventa } from '@moeru/eventa'
 import { array, literal, number, object, optional, string } from 'valibot'
@@ -15,6 +16,14 @@ export const exportInputSchema = object({
 })
 
 export type ExportInput = InferOutput<typeof exportInputSchema>
+
+export interface ExportMessageRecord extends MessageRecord {
+  /**
+   * One-level snapshot of the replied-to message. A null value means the
+   * reference exists but the target is unavailable in the local database.
+   */
+  replyTo?: MessageRecord | null
+}
 
 export type ExportUpdate
   = | { type: 'started', taskId: string }

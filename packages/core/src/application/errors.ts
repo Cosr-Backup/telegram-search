@@ -46,6 +46,19 @@ function telegramError(error: unknown): AppError | undefined {
   const message = errorMessage(error)
   const retryAfter = retryAfterSeconds(error, rpcErrorMessage)
 
+  if (retryAfter?.code === 'TAKEOUT_INIT_DELAY') {
+    return {
+      code: 'TAKEOUT_AUTHORIZATION_REQUIRED',
+      message: 'Telegram requires user authorization for this data export. Ask the user to review and authorize the export request on one of their Telegram devices, then rerun sync --takeout after Telegram allows it.',
+      retryable: false,
+      retryAfterSeconds: retryAfter.seconds,
+      details: {
+        action: 'authorize_takeout_in_telegram',
+        telegramError: `TAKEOUT_INIT_DELAY_${retryAfter.seconds}`,
+      },
+    }
+  }
+
   if (retryAfter) {
     return {
       code: retryAfter.code,

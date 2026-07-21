@@ -1,6 +1,7 @@
 import type { Logger } from '@guiiai/logg'
 import type {
   CursorPage,
+  ExportMessageRecord,
   MessageContext,
   MessageContextInput,
   MessageRecord,
@@ -47,6 +48,39 @@ export function createLocalMessagesService(options: {
     }
   }
 
+  async function queryForExport(input: QueryLocalMessagesInput): Promise<CursorPage<ExportMessageRecord>> {
+    const page = await query(input)
+    const references = page.items.flatMap(message => message.replyToId
+      ? [{ chatId: message.chatId, messageId: message.replyToId }]
+      : [])
+    if (references.length === 0)
+      return page
+
+    const replyRows = (await models.chatMessageModels.fetchMessagesByChatAndPlatformIds(
+      db,
+      accountId,
+      references,
+    )).expect('Failed to resolve exported reply context')
+    const replyByReference = new Map(
+      replyRows
+        .map(convertToCoreMessageFromDB)
+        .map(coreMessageToRecord)
+        .map(message => [`${message.chatId}:${message.id}`, message] as const),
+    )
+
+    return {
+      ...page,
+      items: page.items.map((message) => {
+        if (!message.replyToId)
+          return message
+        return {
+          ...message,
+          replyTo: replyByReference.get(`${message.chatId}:${message.replyToId}`) ?? null,
+        }
+      }),
+    }
+  }
+
   async function search(input: SearchMessagesInput): Promise<CursorPage<SearchMessageRecord>> {
     const offset = cursorOffset(input.cursor)
     const rows = (await models.chatMessageModels.retrieveMessages(
@@ -87,5 +121,5 @@ export function createLocalMessagesService(options: {
     }
   }
 
-  return { context, query, search }
+  return { context, query, queryForExport, search }
 }

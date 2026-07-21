@@ -310,7 +310,7 @@ export function createTelegramApplicationRuntime(options: {
     searchLocalMessages: input => appResult(() => localMessages.search(input)),
     getLocalMessageContext: input => appResult(() => localMessages.context(input)),
     getLocalStats: input => appResult(() => calculateLocalStats(input)),
-    exportLocal: (input, signal) => createExportService(cursor => localMessages.query({
+    exportLocal: (input, signal) => createExportService(cursor => localMessages.queryForExport({
       chatIds: input.chatIds,
       from: input.from,
       to: input.to,
