@@ -113,6 +113,30 @@ describe('takeout service', () => {
     expect(count).toBe(123)
   })
 
+  it('routes idempotent history reads through the injected retry policy', async () => {
+    const client = {
+      invoke: vi.fn(async () => ({ count: 123, messages: [] })),
+    }
+    let retryCallCount = 0
+    const retryTelegramRead = async <T>(operation: () => Promise<T>) => {
+      retryCallCount += 1
+      return operation()
+    }
+    const { ctx } = createMockCtx(client)
+    const service = createTakeoutService(
+      ctx,
+      logger,
+      mockChatModels,
+      mockChatMessageStatsModels,
+      mockEntityService,
+      { retryTelegramRead },
+    )
+
+    await service.getTotalMessageCount('123')
+
+    expect(retryCallCount).toBe(1)
+  })
+
   it('getTotalMessageCount should return 0 on failure', async () => {
     const client = {
       invoke: vi.fn(async () => {

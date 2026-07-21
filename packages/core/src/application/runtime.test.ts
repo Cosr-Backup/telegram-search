@@ -143,6 +143,23 @@ describe('telegram application runtime remote boundaries', () => {
     )
   })
 
+  it('preserves transient Telegram failures for the CLI retry boundary', async () => {
+    const harness = createHarness()
+    harness.getDialogs.mockRejectedValue({
+      code: 500,
+      errorMessage: 'RPC_CALL_FAIL',
+      message: '500: RPC_CALL_FAIL',
+    })
+    const runtime = createTelegramApplicationRuntime(harness)
+
+    const result = await runtime.listChats({ limit: 1 })
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'TELEGRAM_TRANSIENT', retryable: true },
+    })
+  })
+
   it('persists a resolved chat before recording its synced messages', async () => {
     const harness = createHarness()
     const runtime = createTelegramApplicationRuntime(harness)
@@ -214,6 +231,33 @@ describe('telegram application runtime remote boundaries', () => {
       },
     })
     expect(harness.getMessages).not.toHaveBeenCalled()
+  })
+
+  it('reports Telegram flood waits from takeout without restarting the stream', async () => {
+    const harness = createHarness()
+    harness.takeoutMessages.mockImplementation(async function* (_chatId, options) {
+      options.task.updateError({
+        code: 420,
+        errorMessage: 'FLOOD_WAIT_298',
+        message: 'A wait of 298 seconds is required',
+      })
+      yield* []
+    })
+    const runtime = createTelegramApplicationRuntime(harness)
+
+    const updates = []
+    for await (const update of runtime.sync({ chatIds: ['public-channel'], all: false, limit: 1, takeout: true }))
+      updates.push(update)
+
+    expect(updates.at(-1)).toMatchObject({
+      type: 'failed',
+      error: {
+        code: 'TELEGRAM_FLOOD_WAIT',
+        retryable: true,
+        retryAfterSeconds: 298,
+      },
+    })
+    expect(harness.takeoutMessages).toHaveBeenCalledOnce()
   })
 
   it('stores jieba tokens so synced text is searchable', async () => {

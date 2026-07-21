@@ -29,8 +29,10 @@ export function createTakeoutService(
   chatModels: ChatModels,
   chatMessageStatsModels: ChatMessageStatsModels,
   entityService: Pick<EntityService, 'getInputPeer'>,
+  options: { retryTelegramRead?: <T>(operation: () => Promise<T>) => Promise<T> } = {},
 ) {
   logger = logger.withContext('core:takeout:service')
+  const retryTelegramRead = options.retryTelegramRead ?? (async <T>(operation: () => Promise<T>) => operation())
 
   // Store active tasks by taskId for abort handling
   const activeTasks = new Map<string, ReturnType<typeof createTask>>()
@@ -66,10 +68,10 @@ export function createTakeoutService(
    */
   async function getSplitRanges(takeout: Api.account.Takeout): Promise<Api.MessageRange[]> {
     return withSpan('takeout:getSplitRanges', async () => {
-      const ranges = await ctx.getClient().invoke(new Api.InvokeWithTakeout({
+      const ranges = await retryTelegramRead(() => ctx.getClient().invoke(new Api.InvokeWithTakeout({
         takeoutId: takeout.id,
         query: new Api.messages.GetSplitRanges(),
-      })) as Api.MessageRange[]
+      }))) as Api.MessageRange[]
       logger.withFields({ rangeCount: ranges.length }).log('Fetched split ranges')
       return ranges
     })
@@ -173,7 +175,7 @@ export function createTakeoutService(
       // Resolve peer via entityService to get the correct InputPeer type and accessHash
       // from the DB, avoiding misidentification (e.g. channel treated as PeerUser).
       const peer = await entityService.getInputPeer(chatId as string | number)
-      const history = await ctx.getClient()
+      const history = await retryTelegramRead(() => ctx.getClient()
         .invoke(new Api.messages.GetHistory({
           peer,
           limit: 1,
@@ -183,7 +185,7 @@ export function createTakeoutService(
           maxId: 0,
           minId: 0,
           hash: bigInt(0),
-        })) as Api.messages.TypeMessages & { count: number }
+        }))) as Api.messages.TypeMessages & { count: number }
 
       return Ok(history)
     }
@@ -283,7 +285,7 @@ export function createTakeoutService(
       const query = buildInvokeQuery(historyQuery, takeoutSession, range)
       const fetchStart = performance.now()
       const result = await withSpan('takeout:fetchPage', () => {
-        return ctx.getClient().invoke(query) as unknown as Promise<Api.messages.MessagesSlice>
+        return retryTelegramRead(() => ctx.getClient().invoke(query) as unknown as Promise<Api.messages.MessagesSlice>)
       }, {
         chatId,
         offsetId,

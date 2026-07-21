@@ -16,6 +16,7 @@ import {
   initDrizzle,
   models,
   registerApplicationHandlers,
+  retryTelegramOperation,
 } from '@tg-search/core'
 import {
   chatContracts,
@@ -29,7 +30,9 @@ import { StringSession } from 'telegram/sessions/index.js'
 
 import { closeOwnedTelegramClient } from './auth-support'
 import { createGramJsStderrLogger } from './gramjs-logger'
+import { writeProgress } from './output'
 import { readProfileConfig, readSession, writeProfileConfig } from './profile'
+import { CLI_TELEGRAM_CLIENT_OPTIONS } from './telegram-client-options'
 
 function createSilentLogger(): Logger {
   const logger: Record<string, unknown> = {}
@@ -91,7 +94,7 @@ export async function createCliRuntime(paths: ProfilePaths, options: { remote: b
       new StringSession(session),
       Number(config.api.telegram.apiId),
       config.api.telegram.apiHash,
-      { connectionRetries: 3, baseLogger: createGramJsStderrLogger() },
+      { ...CLI_TELEGRAM_CLIENT_OPTIONS, baseLogger: createGramJsStderrLogger() },
     )
     await client.connect()
     if (!await client.isUserAuthorized()) {
@@ -114,7 +117,14 @@ export async function createCliRuntime(paths: ProfilePaths, options: { remote: b
     }
   }
 
-  const application = createTelegramApplicationRuntime({ context, logger, models })
+  const application = createTelegramApplicationRuntime({
+    context,
+    logger,
+    models,
+    retryTelegramRead: operation => retryTelegramOperation(operation, {
+      onRetry: notice => writeProgress({ type: 'telegram-retry', ...notice }),
+    }),
+  })
   const eventContext = createContext()
   const unregister = registerApplicationHandlers(eventContext, application)
 

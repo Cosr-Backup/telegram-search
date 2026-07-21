@@ -41,19 +41,12 @@ import { createStatsAccumulator } from '../services/stats'
 import { createTakeoutService } from '../services/takeout'
 import { convertToCoreMessage } from '../utils/message'
 import { createTask } from '../utils/task'
-import { appResult } from './errors'
+import { appResult, toAppError } from './errors'
 
-function takeoutFailure(message: string): AppError {
-  const delay = /TAKEOUT_INIT_DELAY_(\d+)/.exec(message)
-  if (delay) {
-    return {
-      code: 'TAKEOUT_INIT_DELAY',
-      message,
-      retryable: true,
-      retryAfterSeconds: Number(delay[1]),
-    }
-  }
-
+function takeoutFailure(error: unknown, message: string): AppError {
+  const classified = toAppError(error)
+  if (classified.code !== 'INTERNAL')
+    return classified
   return { code: 'TAKEOUT_FAILED', message, retryable: false }
 }
 
@@ -78,6 +71,7 @@ export function createTelegramApplicationRuntime(options: {
   models?: Models
   entityService?: Pick<EntityService, 'getInputPeer'>
   takeoutService?: Pick<TakeoutService, 'takeoutMessages'>
+  retryTelegramRead?: <T>(operation: () => Promise<T>) => Promise<T>
 }): TelegramApplicationRuntime {
   const { context } = options
   const logger = options.logger ?? useLogger('application')
@@ -89,6 +83,7 @@ export function createTelegramApplicationRuntime(options: {
     runtimeModels.chatModels,
     runtimeModels.chatMessageStatsModels,
     entityService,
+    { retryTelegramRead: options.retryTelegramRead },
   )
   const jiebaResolver = createJiebaResolver(logger)
   const localMessages = createLocalMessagesService({
@@ -213,82 +208,88 @@ export function createTelegramApplicationRuntime(options: {
 
     yield { type: 'started', taskId }
 
-    const chatIds = input.all
-      ? (await fetchAndPersistDialogs()).map(chat => chat.id)
-      : input.chatIds
+    try {
+      const chatIds = input.all
+        ? (await fetchAndPersistDialogs()).map(chat => chat.id)
+        : input.chatIds
 
-    for (const chatId of chatIds) {
-      if (signal?.aborted)
-        return
-      if (input.all)
-        await entityService.getInputPeer(chatId)
-      else
-        await resolveAndPersistPeer(chatId)
+      for (const chatId of chatIds) {
+        if (signal?.aborted)
+          return
+        if (input.all)
+          await entityService.getInputPeer(chatId)
+        else
+          await resolveAndPersistPeer(chatId)
 
-      const takeoutTask = createTask('takeout', { chatIds: [chatId], totalMessages: input.limit }, context.emitter, logger)
-      const abortTakeout = () => takeoutTask.abort()
-      signal?.addEventListener('abort', abortTakeout, { once: true })
+        const takeoutTask = createTask('takeout', { chatIds: [chatId], totalMessages: input.limit }, context.emitter, logger)
+        const abortTakeout = () => takeoutTask.abort()
+        signal?.addEventListener('abort', abortTakeout, { once: true })
 
-      let rawBatch: Api.Message[] = []
-      const persistBatch = async (batch: Api.Message[]) => {
-        const coreMessages = batch.flatMap((rawMessage) => {
-          const coreMessage = convertToCoreMessage(rawMessage).orUndefined()
-          return coreMessage ? [coreMessage] : []
-        })
-        const tokenizedMessages = jiebaResolver.run
-          ? (await jiebaResolver.run({ messages: coreMessages, rawMessages: batch })).orUndefined() ?? coreMessages
-          : coreMessages
-        await runtimeModels.chatMessageModels.recordMessages(
-          context.getDB(),
-          context.getCurrentAccountId(),
-          tokenizedMessages,
-        )
-        processed += tokenizedMessages.length
-        return tokenizedMessages.at(-1)
-      }
-
-      try {
-        for await (const message of takeoutService.takeoutMessages(chatId, {
-          pagination: { limit: 100, offset: 0 },
-          startTime: input.from === undefined ? undefined : input.from * 1000,
-          endTime: input.to === undefined ? undefined : input.to * 1000,
-          skipMedia: true,
-          maxMessages: input.limit,
-          expectedCount: input.limit,
-          disableAutoProgress: true,
-          takeoutConsent: true,
-          task: takeoutTask,
-        })) {
-          rawBatch.push(message)
-          if (rawBatch.length < 100)
-            continue
-
-          const lastMessage = await persistBatch(rawBatch)
-          if (lastMessage)
-            yield { type: 'checkpoint', taskId, chatId, messageId: lastMessage.platformMessageId }
-          yield { type: 'progress', taskId, processed }
-          rawBatch = []
+        let rawBatch: Api.Message[] = []
+        const persistBatch = async (batch: Api.Message[]) => {
+          const coreMessages = batch.flatMap((rawMessage) => {
+            const coreMessage = convertToCoreMessage(rawMessage).orUndefined()
+            return coreMessage ? [coreMessage] : []
+          })
+          const tokenizedMessages = jiebaResolver.run
+            ? (await jiebaResolver.run({ messages: coreMessages, rawMessages: batch })).orUndefined() ?? coreMessages
+            : coreMessages
+          await runtimeModels.chatMessageModels.recordMessages(
+            context.getDB(),
+            context.getCurrentAccountId(),
+            tokenizedMessages,
+          )
+          processed += tokenizedMessages.length
+          return tokenizedMessages.at(-1)
         }
 
-        if (rawBatch.length > 0) {
-          const lastMessage = await persistBatch(rawBatch)
-          if (lastMessage)
-            yield { type: 'checkpoint', taskId, chatId, messageId: lastMessage.platformMessageId }
-          yield { type: 'progress', taskId, processed }
-        }
-      }
-      finally {
-        signal?.removeEventListener('abort', abortTakeout)
-      }
+        try {
+          for await (const message of takeoutService.takeoutMessages(chatId, {
+            pagination: { limit: 100, offset: 0 },
+            startTime: input.from === undefined ? undefined : input.from * 1000,
+            endTime: input.to === undefined ? undefined : input.to * 1000,
+            skipMedia: true,
+            maxMessages: input.limit,
+            expectedCount: input.limit,
+            disableAutoProgress: true,
+            takeoutConsent: true,
+            task: takeoutTask,
+          })) {
+            rawBatch.push(message)
+            if (rawBatch.length < 100)
+              continue
 
-      if (takeoutTask.state.lastError) {
-        yield {
-          type: 'failed',
-          taskId,
-          error: takeoutFailure(takeoutTask.state.lastError),
+            const lastMessage = await persistBatch(rawBatch)
+            if (lastMessage)
+              yield { type: 'checkpoint', taskId, chatId, messageId: lastMessage.platformMessageId }
+            yield { type: 'progress', taskId, processed }
+            rawBatch = []
+          }
+
+          if (rawBatch.length > 0) {
+            const lastMessage = await persistBatch(rawBatch)
+            if (lastMessage)
+              yield { type: 'checkpoint', taskId, chatId, messageId: lastMessage.platformMessageId }
+            yield { type: 'progress', taskId, processed }
+          }
         }
-        return
+        finally {
+          signal?.removeEventListener('abort', abortTakeout)
+        }
+
+        if (takeoutTask.state.lastError) {
+          yield {
+            type: 'failed',
+            taskId,
+            error: takeoutFailure(takeoutTask.state.rawError, takeoutTask.state.lastError),
+          }
+          return
+        }
       }
+    }
+    catch (error) {
+      yield { type: 'failed', taskId, error: toAppError(error) }
+      return
     }
 
     yield { type: 'completed', taskId, processed }

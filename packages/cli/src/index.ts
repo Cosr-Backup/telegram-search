@@ -7,11 +7,12 @@ import process from 'node:process'
 import { createRequire } from 'node:module'
 import { createInterface } from 'node:readline/promises'
 
+import { retryTelegramResult, toAppError } from '@tg-search/core'
 import { defineCommand, runMain } from 'citty'
 import { TelegramClient } from 'telegram'
 import { StringSession } from 'telegram/sessions/index.js'
 
-import { closeOwnedTelegramClient, createAuthPrompts } from './auth-support'
+import { closeOwnedTelegramClient, createAuthPrompts, shouldStopAuthFlow } from './auth-support'
 import { createGramJsStderrLogger } from './gramjs-logger'
 import { hasWrittenEnvelope, resetEnvelopeState, writeFailure, writeOutput, writeProgress } from './output'
 import {
@@ -22,6 +23,7 @@ import {
   writeSession,
 } from './profile'
 import { createCliRuntime } from './runtime'
+import { CLI_TELEGRAM_CLIENT_OPTIONS } from './telegram-client-options'
 
 const CLI_VERSION = (createRequire(import.meta.url)('../package.json') as { version: string }).version
 const profileArg = { profile: { type: 'string' as const, default: 'default' } }
@@ -56,9 +58,18 @@ function parseChatIds(value: string | undefined): string[] | undefined {
   return ids?.length ? ids : undefined
 }
 
-async function withRuntime<T>(profile: string, remote: boolean, operation: (runtime: Awaited<ReturnType<typeof createCliRuntime>>) => Promise<T>): Promise<T> {
+async function withRuntime<T>(profile: string, remote: boolean, operation: (runtime: Awaited<ReturnType<typeof createCliRuntime>>) => Promise<T>): Promise<T | undefined> {
   const paths = await ensureProfile(profile)
-  const runtime = await createCliRuntime(paths, { remote })
+  let runtime: Awaited<ReturnType<typeof createCliRuntime>>
+  try {
+    runtime = await createCliRuntime(paths, { remote })
+  }
+  catch (error) {
+    if (!remote)
+      throw error
+    emitResult({ ok: false, error: toAppError(error) }, outputMeta(profile, 'telegram'))
+    return undefined
+  }
   try {
     return await operation(runtime)
   }
@@ -86,6 +97,13 @@ export function emitResult<T>(result: AppResult<T>, meta: OutputMeta): void {
   }
   const data = result.data
   writeOutput(data, meta, nextCursorOf(data))
+}
+
+async function emitRetryingTelegramResult<T>(operation: () => Promise<AppResult<T>>, meta: OutputMeta): Promise<void> {
+  const result = await retryTelegramResult(operation, {
+    onRetry: notice => writeProgress({ type: 'telegram-retry', ...notice }),
+  })
+  emitResult(result, meta)
 }
 
 interface StreamUpdate { type: string, error?: AppError }
@@ -169,7 +187,7 @@ const authCommand = defineCommand({
           throw new Error('Configure Telegram API credentials first')
 
         const client = new TelegramClient(new StringSession(''), Number(apiId), apiHash, {
-          connectionRetries: 3,
+          ...CLI_TELEGRAM_CLIENT_OPTIONS,
           baseLogger: createGramJsStderrLogger(),
         })
         try {
@@ -185,10 +203,25 @@ const authCommand = defineCommand({
               }
             },
           })
-          await client.start({
-            ...prompts,
-            onError: error => writeProgress({ type: 'auth-error', message: error.message }),
-          })
+          let authFailureCount = 0
+          let lastAuthError: Error | undefined
+          try {
+            await client.start({
+              ...prompts,
+              onError: async (error) => {
+                authFailureCount += 1
+                lastAuthError = error
+                writeProgress({ type: 'auth-error', message: error.message })
+
+                const classified = toAppError(error)
+                return shouldStopAuthFlow(classified, authFailureCount)
+              },
+            })
+          }
+          catch (error) {
+            emitResult({ ok: false, error: toAppError(lastAuthError ?? error) }, outputMeta(profile, 'telegram'))
+            return
+          }
           const me = await client.getMe()
           await writeSession(paths, String(client.session.save()))
           writeOutput({ profile, userId: String(me.id), username: me.username }, outputMeta(profile, 'telegram'))
@@ -209,10 +242,13 @@ const chatsCommand = defineCommand({
       args: { limit: { type: 'string', default: '100' }, cursor: { type: 'string' }, ...profileArg },
       async run(context) {
         const profile = profileFrom(context)
-        await withRuntime(profile, true, async runtime => emitResult(await runtime.invokes.chats.list({
-          limit: Number(context.args.limit),
-          cursor: stringArg(context.args.cursor) || undefined,
-        }), outputMeta(profile, 'telegram')))
+        await withRuntime(profile, true, async runtime => emitRetryingTelegramResult(
+          () => runtime.invokes.chats.list({
+            limit: Number(context.args.limit),
+            cursor: stringArg(context.args.cursor) || undefined,
+          }),
+          outputMeta(profile, 'telegram'),
+        ))
       },
     }),
   },
@@ -234,14 +270,17 @@ const messagesCommand = defineCommand({
       },
       async run(context) {
         const profile = profileFrom(context)
-        await withRuntime(profile, true, async runtime => emitResult(await runtime.invokes.messages.listRemote({
-          chatId: stringArg(context.args.chat),
-          limit: Number(context.args.limit),
-          cursor: stringArg(context.args.cursor) || undefined,
-          fromUserId: stringArg(context.args.sender) || undefined,
-          from: parseTimestamp(stringArg(context.args.from)),
-          to: parseTimestamp(stringArg(context.args.to)),
-        }), outputMeta(profile, 'telegram')))
+        await withRuntime(profile, true, async runtime => emitRetryingTelegramResult(
+          () => runtime.invokes.messages.listRemote({
+            chatId: stringArg(context.args.chat),
+            limit: Number(context.args.limit),
+            cursor: stringArg(context.args.cursor) || undefined,
+            fromUserId: stringArg(context.args.sender) || undefined,
+            from: parseTimestamp(stringArg(context.args.from)),
+            to: parseTimestamp(stringArg(context.args.to)),
+          }),
+          outputMeta(profile, 'telegram'),
+        ))
       },
     }),
     query: defineCommand({
